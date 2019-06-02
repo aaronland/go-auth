@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/boltdb/bolt"
-	"github.com/straup/go-picturebox/auth/account"
+	"github.com/aaronland/go-auth/account"
 	"reflect"
 	"regexp"
 	"strings"

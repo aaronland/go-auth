@@ -1,8 +1,8 @@
 package username
 
 import (
-	"github.com/aaronland/go-ucd-username"
-	"github.com/straup/go-picturebox/auth/account"
+	ucd "github.com/aaronland/go-ucd-username"
+	"github.com/aaronland/go-auth/account"
 )
 
 type UCDUsername struct {

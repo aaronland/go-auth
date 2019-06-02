@@ -2,18 +2,18 @@ package cookie
 
 import (
 	"errors"
-	"github.com/aaronland/go-secretbox"	
+	"github.com/aaronland/go-secretbox"
 	go_http "net/http"
 )
 
 type EncryptedCookie struct {
 	Cookie
-	name string
+	name   string
 	secret string
-	salt string	
+	salt   string
 }
 
-func NewEncryptedCookie(name string, secret string, salt string) (Cookie, error){
+func NewEncryptedCookie(name string, secret string, salt string) (Cookie, error) {
 
 	if name == "" {
 		return nil, errors.New("Missing name")
@@ -27,10 +27,10 @@ func NewEncryptedCookie(name string, secret string, salt string) (Cookie, error)
 		return nil, errors.New("Missing salt")
 	}
 
-	c := EncryptedCookie {
-		name: name,
+	c := EncryptedCookie{
+		name:   name,
 		secret: secret,
-		salt: salt,
+		salt:   salt,
 	}
 
 	return &c, nil

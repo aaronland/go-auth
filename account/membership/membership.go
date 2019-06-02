@@ -2,8 +2,8 @@ package membership
 
 import (
 	"errors"
-	"github.com/straup/go-picturebox/auth/account"
-	"github.com/straup/go-picturebox/auth/password"
+	"github.com/aaronland/go-auth/account"
+	"github.com/aaronland/go-auth/password"
 )
 
 func GetPassword(m account.Membership) (password.Password, error) {
