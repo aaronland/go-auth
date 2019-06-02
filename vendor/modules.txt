@@ -1,11 +1,20 @@
+# github.com/aaronland/go-artisanal-integers v0.1.0
+github.com/aaronland/go-artisanal-integers
+# github.com/aaronland/go-artisanal-integers-proxy v0.1.0
+github.com/aaronland/go-artisanal-integers-proxy/service
+# github.com/aaronland/go-brooklynintegers-api v1.0.1
+github.com/aaronland/go-brooklynintegers-api
 # github.com/aaronland/go-secretbox v0.1.0
 github.com/aaronland/go-secretbox
 # github.com/aaronland/go-string v0.1.0
 github.com/aaronland/go-string/random
+github.com/aaronland/go-string/dsn
 # github.com/aaronland/go-ucd v0.0.0-20190520134908-684059ca9156
 github.com/aaronland/go-ucd
 # github.com/aaronland/go-ucd-username v0.1.0
 github.com/aaronland/go-ucd-username
+# github.com/aaronland/go-uid v0.0.1
+github.com/aaronland/go-uid
 # github.com/boltdb/bolt v1.3.1
 github.com/boltdb/bolt
 # github.com/cooperhewitt/go-ucd v0.0.0-20170323200852-c4101e1ef9a6
@@ -17,12 +26,18 @@ github.com/patrickmn/go-hmaccrypt
 github.com/tidwall/gjson
 # github.com/tidwall/match v1.0.1
 github.com/tidwall/match
-# github.com/tidwall/pretty v0.0.0-20190325000000-1166b9ac2b65e46a43d8618d30d1554f4652d49b
+# github.com/tidwall/pretty v0.0.0-20190325153808-1166b9ac2b65
 github.com/tidwall/pretty
 # github.com/tidwall/sjson v1.0.4
 github.com/tidwall/sjson
 # github.com/whosonfirst/go-sanitize v0.1.0
 github.com/whosonfirst/go-sanitize
+# github.com/whosonfirst/go-whosonfirst-log v0.1.0
+github.com/whosonfirst/go-whosonfirst-log
+# github.com/whosonfirst/go-whosonfirst-pool v0.1.0
+github.com/whosonfirst/go-whosonfirst-pool
+# github.com/whosonfirst/go-whosonfirst-pool-boltdb v0.1.0
+github.com/whosonfirst/go-whosonfirst-pool-boltdb
 # golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 golang.org/x/crypto/nacl/secretbox
 golang.org/x/crypto/scrypt
@@ -35,6 +50,6 @@ golang.org/x/crypto/blowfish
 # golang.org/x/net v0.0.0-20190522155817-f3200d17e092
 golang.org/x/net/html
 golang.org/x/net/html/atom
-# golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a
+# golang.org/x/sys v0.0.0-20190516110030-61b9204099cb
 golang.org/x/sys/unix
 golang.org/x/sys/cpu

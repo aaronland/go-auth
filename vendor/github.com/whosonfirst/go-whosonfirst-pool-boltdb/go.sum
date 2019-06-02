@@ -1,0 +1,6 @@
+github.com/boltdb/bolt v1.3.1 h1:JQmyP4ZBrce+ZQu0dY660FMfatumYDLun9hBCUVIkF4=
+github.com/boltdb/bolt v1.3.1/go.mod h1:clJnj/oiGkjum5o1McbSZDSLxVThjynRyGBgiAx27Ps=
+github.com/whosonfirst/go-whosonfirst-pool v0.1.0 h1:pwbGycsy/UqK6DJ29tTwnl6wnYYfcaJmsGD+If8un6E=
+github.com/whosonfirst/go-whosonfirst-pool v0.1.0/go.mod h1:6LeQYv7hVK16LVevMuOuaLRfgI3JDtaoVxaMMVqRS38=
+golang.org/x/sys v0.0.0-20190516110030-61b9204099cb h1:k07iPOt0d6nEnwXF+kHB+iEg+WSuKe/SOQuFM2QoD+E=
+golang.org/x/sys v0.0.0-20190516110030-61b9204099cb/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
