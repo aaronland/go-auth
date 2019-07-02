@@ -3,7 +3,7 @@ package membership
 import (
 	"errors"
 	"github.com/aaronland/go-auth/account"
-	"github.com/aaronland/go-auth/password"
+	"github.com/aaronland/go-password"
 )
 
 func GetPassword(m account.Membership) (password.Password, error) {

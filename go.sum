@@ -13,6 +13,7 @@ github.com/aaronland/go-http-sanitize v0.0.1 h1:35rmeJh9Kx9mphGJXitQ6dOsC2fEPdn9
 github.com/aaronland/go-http-sanitize v0.0.1/go.mod h1:qUi4rzUPcpMntpUFnHK00yQI5vd/Q7x9MFYwX91/ygI=
 github.com/aaronland/go-londonintegers-api v0.1.0/go.mod h1:E0VIcwks+So4FL1FYAQzrO5/OVOUsFPsqW85UrZArSE=
 github.com/aaronland/go-missionintegers-api v0.1.0/go.mod h1:LZEM5+MkPX5RehLxTEv+3Y3cqMSYEk86qBa+aVecnKw=
+github.com/aaronland/go-password v0.0.1 h1:8akbY8yj2ktsyMKIHKfmFJHvKZtY9jXAHdvMNGxMu6s=
 github.com/aaronland/go-password v0.0.1/go.mod h1:Q/aLEVmpLERC+WnX9qYXEAni4sYbgba8rur26QNKo6U=
 github.com/aaronland/go-secretbox v0.1.0 h1:1M4LVD/qvdmZac+vjhjPt1SDobv++cASt8izGSrzN4U=
 github.com/aaronland/go-secretbox v0.1.0/go.mod h1:HdQrEPwc1KCsqMzmC6OCDFt31JnDhkTl3waaHTXYW3g=

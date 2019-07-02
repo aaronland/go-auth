@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/aaronland/go-auth/account"
 	"github.com/aaronland/go-auth/account/username"
-	"github.com/aaronland/go-auth/password"
+	"github.com/aaronland/go-password"
 	"github.com/aaronland/go-uid"
 	"github.com/tidwall/gjson"
 	_ "github.com/tidwall/sjson"
