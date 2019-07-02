@@ -6,8 +6,8 @@ import (
 	"github.com/aaronland/go-auth/account"
 	"github.com/aaronland/go-auth/account/membership"
 	"github.com/aaronland/go-auth/http"
-	"github.com/aaronland/go-auth/http/cookie"
-	"github.com/aaronland/go-auth/http/params"
+	"github.com/aaronland/go-http-cookie"
+	"github.com/aaronland/go-http-sanitize"
 	"html/template"
 	_ "log"
 	go_http "net/http"
@@ -120,14 +120,14 @@ func (auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Templa
 
 		case "POST":
 
-			str_email, err := params.PostString(req, "email")
+			str_email, err := sanitize.PostString(req, "email")
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
 				return
 			}
 
-			str_password, err := params.PostString(req, "password")
+			str_password, err := sanitize.PostString(req, "password")
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
@@ -215,21 +215,21 @@ func (auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Templa
 
 		case "POST":
 
-			str_email, err := params.PostString(req, "email")
+			str_email, err := sanitize.PostString(req, "email")
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
 				return
 			}
 
-			str_username, err := params.PostString(req, "username")
+			str_username, err := sanitize.PostString(req, "username")
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
 				return
 			}
 
-			str_password, err := params.PostString(req, "password")
+			str_password, err := sanitize.PostString(req, "password")
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)

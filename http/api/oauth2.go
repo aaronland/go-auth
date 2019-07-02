@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/aaronland/go-auth/account"
 	"github.com/aaronland/go-auth/http"
-	"github.com/aaronland/go-auth/http/rewrite"
+	"github.com/aaronland/go-http-rewrite"
 	"golang.org/x/net/html"
 	"html/template"
 	"io"
