@@ -3,9 +3,9 @@ package www
 import (
 	"errors"
 	"fmt"
+	"github.com/aaronland/go-http-auth"
 	"github.com/aaronland/go-http-auth/account"
 	"github.com/aaronland/go-http-auth/database"
-	"github.com/aaronland/go-http-auth/http"
 	"github.com/aaronland/go-http-cookie"
 	"github.com/aaronland/go-http-sanitize"
 	"html/template"
@@ -37,30 +37,30 @@ func DefaultEmailPasswordAuthenticatorOptions() *EmailPasswordAuthenticatorOptio
 }
 
 type EmailPasswordAuthenticator struct {
-	http.HTTPAuthenticator
+	auth.HTTPAuthenticator
 	account_db database.AccountDatabase
 	options    *EmailPasswordAuthenticatorOptions
 }
 
-func NewEmailPasswordAuthenticator(db database.AccountDatabase, opts *EmailPasswordAuthenticatorOptions) (http.HTTPAuthenticator, error) {
+func NewEmailPasswordAuthenticator(db database.AccountDatabase, opts *EmailPasswordAuthenticatorOptions) (auth.HTTPAuthenticator, error) {
 
-	auth := EmailPasswordAuthenticator{
+	ep_auth := EmailPasswordAuthenticator{
 		account_db: db,
 		options:    opts,
 	}
 
-	return &auth, nil
+	return &ap_auth, nil
 }
 
-func (auth *EmailPasswordAuthenticator) AppendCredentialsHandler(prev go_http.Handler) go_http.Handler {
+func (ep_auth *EmailPasswordAuthenticator) AppendCredentialsHandler(prev go_http.Handler) go_http.Handler {
 	return http.NotImplementedHandler()
 }
 
-func (auth *EmailPasswordAuthenticator) AuthHandler(next go_http.Handler) go_http.Handler {
+func (ep_auth *EmailPasswordAuthenticator) AuthHandler(next go_http.Handler) go_http.Handler {
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
-		acct, err := auth.GetMembershipForRequest(req)
+		acct, err := ep_auth.GetMembershipForRequest(req)
 
 		if err != nil {
 			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -68,18 +68,18 @@ func (auth *EmailPasswordAuthenticator) AuthHandler(next go_http.Handler) go_htt
 		}
 
 		if acct == nil {
-			go_http.Redirect(rsp, req, auth.options.SigninURL, 303)
+			go_http.Redirect(rsp, req, ep_auth.options.SigninURL, 303)
 			return
 		}
 
-		req = http.SetMembershipContext(req, acct)
+		req = auth.SetMembershipContext(req, acct)
 		next.ServeHTTP(rsp, req)
 	}
 
 	return go_http.HandlerFunc(fn)
 }
 
-func (auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Template, t_name string) go_http.Handler {
+func (ep_auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Template, t_name string) go_http.Handler {
 
 	type SigninVars struct {
 		PageTitle string
@@ -89,7 +89,7 @@ func (auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Templa
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
-		ok, err := http.IsAuthenticated(auth, req)
+		ok, err := auth.IsAuthenticated(ep_auth, req)
 
 		if err != nil {
 			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -134,7 +134,7 @@ func (auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Templa
 				return
 			}
 
-			acct, err := auth.account_db.GetAccountByEmailAddress(str_email)
+			acct, err := ep_auth.account_db.GetAccountByEmailAddress(str_email)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -155,14 +155,14 @@ func (auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Templa
 				return
 			}
 
-			err = auth.setAuthCookie(rsp, m)
+			err = ep_auth.setAuthCookie(rsp, m)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
 				return
 			}
 
-			go_http.Redirect(rsp, req, auth.options.RootURL, 303)
+			go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303)
 			return
 
 		default:
@@ -174,7 +174,7 @@ func (auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Templa
 	return go_http.HandlerFunc(fn)
 }
 
-func (auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Template, t_name string) go_http.Handler {
+func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Template, t_name string) go_http.Handler {
 
 	type SignupVars struct {
 		PageTitle string
@@ -184,20 +184,20 @@ func (auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Templa
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
-		ok, err := http.IsAuthenticated(auth, req)
+		ok, err := auth.IsAuthenticated(ep_auth, req)
 
 		if err != nil {
 			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
 		}
 
 		if ok {
-			go_http.Redirect(rsp, req, auth.options.RootURL, 303) // check for ?redir=
+			go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303) // check for ?redir=
 			return
 		}
 
 		vars := SignupVars{
 			PageTitle: "Sign up",
-			SigninURL: auth.options.SigninURL,
+			SigninURL: ep_auth.options.SigninURL,
 		}
 
 		switch req.Method {
@@ -238,7 +238,7 @@ func (auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Templa
 
 			// FIX ME
 
-			acct, err := membership.NewIndividualMembershipFromStrings(str_email, str_password, str_username)
+			acct, err := account.NewAccount(str_email, str_password, str_username)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -252,7 +252,7 @@ func (auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Templa
 				return
 			}
 
-			err = auth.setAuthCookie(rsp, acct)
+			err = ep_auth.setAuthCookie(rsp, acct)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -261,7 +261,7 @@ func (auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Templa
 
 			// FIX ME: CHECK COOKIE...
 
-			go_http.Redirect(rsp, req, auth.options.RootURL, 303)
+			go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303)
 			return
 
 		default:
@@ -273,7 +273,7 @@ func (auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Templa
 	return go_http.HandlerFunc(fn)
 }
 
-func (auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Template, t_name string) go_http.Handler {
+func (ep_auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Template, t_name string) go_http.Handler {
 
 	type SignoutVars struct {
 		PageTitle string
@@ -282,14 +282,14 @@ func (auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Templ
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
-		ok, err := http.IsAuthenticated(auth, req)
+		ok, err := auth.IsAuthenticated(ep_auth, req)
 
 		if err != nil {
 			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
 		}
 
 		if !ok {
-			go_http.Redirect(rsp, req, auth.options.RootURL, 303)
+			go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303)
 			return
 		}
 
@@ -312,7 +312,7 @@ func (auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Templ
 
 		case "POST":
 
-			ck, err := auth.newAuthCookie()
+			ck, err := ep_auth.newAuthCookie()
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -326,7 +326,7 @@ func (auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Templ
 				return
 			}
 
-			go_http.Redirect(rsp, req, auth.options.RootURL, 303)
+			go_http.Redirect(rsp, req, rp_auth.options.RootURL, 303)
 			return
 
 		default:
@@ -339,9 +339,9 @@ func (auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Templ
 
 }
 
-func (auth *EmailPasswordAuthenticator) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
+func (ep_auth *EmailPasswordAuthenticator) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
 
-	ck, err := auth.newAuthCookie()
+	ck, err := ep_auth.newAuthCookie()
 
 	if err != nil {
 		return nil, err
@@ -368,7 +368,7 @@ func (auth *EmailPasswordAuthenticator) GetAccountForRequest(req *go_http.Reques
 	id := parts[0]
 	pswd := parts[1]
 
-	acct, err := auth.account_db.GetAccountById(id)
+	acct, err := ep_auth.account_db.GetAccountById(id)
 
 	if err != nil {
 		return nil, err
@@ -383,12 +383,12 @@ func (auth *EmailPasswordAuthenticator) GetAccountForRequest(req *go_http.Reques
 	return m, nil
 }
 
-func (auth *EmailPasswordAuthenticator) newAuthCookie() (cookie.Cookie, error) {
+func (ep_auth *EmailPasswordAuthenticator) newAuthCookie() (cookie.Cookie, error) {
 
-	return cookie.NewAuthCookie(auth.options.CookieName, auth.options.CookieSecret, auth.options.CookieSalt)
+	return cookie.NewAuthCookie(ep_auth.options.CookieName, ep_auth.options.CookieSecret, ep_auth.options.CookieSalt)
 }
 
-func (auth *EmailPasswordAuthenticator) setAuthCookie(rsp go_http.ResponseWriter, acct *account.Account) error {
+func (ep_auth *EmailPasswordAuthenticator) setAuthCookie(rsp go_http.ResponseWriter, acct *account.Account) error {
 
 	p, err := acct.GetPassword()
 

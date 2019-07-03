@@ -2,8 +2,9 @@ package api
 
 import (
 	"errors"
-	"github.com/aaronland/go-auth/account"
-	"github.com/aaronland/go-auth/http"
+	"github.com/aaronland/go-http-auth"
+	"github.com/aaronland/go-http-auth/account"
+	"github.com/aaronland/go-http-auth/database"
 	"github.com/aaronland/go-http-rewrite"
 	"golang.org/x/net/html"
 	"html/template"
@@ -13,20 +14,20 @@ import (
 )
 
 type OAuth2Authenticator struct {
-	http.HTTPAuthenticator
-	membership account.MembershipDatabase
+	auth.HTTPAuthenticator
+	account_db database.AccountDatabase
 }
 
-func NewOAuth2Authenticator(db account.MembershipDatabase) (http.HTTPAuthenticator, error) {
+func NewOAuth2Authenticator(db database.AccountDatabase) (http.HTTPAuthenticator, error) {
 
-	auth := OAuth2Authenticator{
-		membership: db,
+	o_auth := OAuth2Authenticator{
+		account_db: db,
 	}
 
-	return &auth, nil
+	return &o_auth, nil
 }
 
-func (auth *OAuth2Authenticator) AppendCredentialsHandler(prev go_http.Handler) go_http.Handler {
+func (o_auth *OAuth2Authenticator) AppendCredentialsHandler(prev go_http.Handler) go_http.Handler {
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
@@ -51,11 +52,11 @@ func (auth *OAuth2Authenticator) AppendCredentialsHandler(prev go_http.Handler) 
 	return go_http.HandlerFunc(fn)
 }
 
-func (auth *OAuth2Authenticator) AuthHandler(next go_http.Handler) go_http.Handler {
+func (o_auth *OAuth2Authenticator) AuthHandler(next go_http.Handler) go_http.Handler {
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
-		m, err := auth.GetMembershipForRequest(req)
+		acct, err := o_auth.GetAccountForRequest(req)
 
 		if err != nil {
 			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -67,26 +68,26 @@ func (auth *OAuth2Authenticator) AuthHandler(next go_http.Handler) go_http.Handl
 			return
 		}
 
-		req = http.SetMembershipContext(req, m)
+		req = auth.SetAccountContext(req, acct)
 		next.ServeHTTP(rsp, req)
 	}
 
 	return go_http.HandlerFunc(fn)
 }
 
-func (auth *OAuth2Authenticator) SigninHandler(*template.Template, string) go_http.Handler {
+func (o_auth *OAuth2Authenticator) SigninHandler(*template.Template, string) go_http.Handler {
 	return http.NotImplementedHandler()
 }
 
-func (auth *OAuth2Authenticator) SignupHandler(*template.Template, string) go_http.Handler {
+func (o_auth *OAuth2Authenticator) SignupHandler(*template.Template, string) go_http.Handler {
 	return http.NotImplementedHandler()
 }
 
-func (auth *OAuth2Authenticator) SignoutHandler(*template.Template, string) go_http.Handler {
+func (o_auth *OAuth2Authenticator) SignoutHandler(*template.Template, string) go_http.Handler {
 	return http.NotImplementedHandler()
 }
 
-func (auth *OAuth2Authenticator) GetMembershipForRequest(req *go_http.Request) (account.Membership, error) {
+func (o_auth *OAuth2Authenticator) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
 
 	token := req.FormValue("access_token")
 
@@ -96,10 +97,10 @@ func (auth *OAuth2Authenticator) GetMembershipForRequest(req *go_http.Request) (
 		return nil, errors.New("Missing access token")
 	}
 
-	return auth.membership.GetMembershipByIdentifier("access_token", token)
+	return nil, errors.New("Please write me")
 }
 
-func NewAccessTokenRewriteFunc(acct account.Membership) rewrite.RewriteHTMLFunc {
+func NewAccessTokenRewriteFunc(acct *account.Account) rewrite.RewriteHTMLFunc {
 
 	var rewrite_func rewrite.RewriteHTMLFunc
 
@@ -109,7 +110,7 @@ func NewAccessTokenRewriteFunc(acct account.Membership) rewrite.RewriteHTMLFunc 
 
 			token_ns := ""
 			token_key := "data-oauth2-access-token"
-			token_value := "fixme" // acct.Get("access_token")
+			token_value := "FIXME"
 
 			token_attr := html.Attribute{token_ns, token_key, token_value}
 			n.Attr = append(n.Attr, token_attr)
