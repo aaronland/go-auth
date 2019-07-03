@@ -1,6 +1,7 @@
-module github.com/aaronland/go-auth
+module github.com/aaronland/go-http-auth
 
 require (
+	github.com/aaronland/go-auth v0.0.1
 	github.com/aaronland/go-http-cookie v0.0.1
 	github.com/aaronland/go-http-crumb v0.0.3
 	github.com/aaronland/go-http-rewrite v0.0.1

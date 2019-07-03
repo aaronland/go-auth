@@ -1,47 +1,39 @@
 package account
 
-import ()
+import (
+	"errors"
+	"github.com/aaronland/go-password"
+)
 
-type Membership interface {
-	Id() string
-	Identifiers() []string
-	Details() []byte
-	// Username() account.Username
-	// Email() *mail.Address
-	// Password() password.Password
-	GetProperty(string) (interface{}, bool)
-	SetProperty(string, interface{}) error
+const ACCOUNT_STATUS_PENDING int = 0
+const ACCOUNT_STATUS_ENABLED int = 1
+const ACCOUNT_STATUS_DISABLED int = 2
+const ACCOUNT_STATUS_DELETED int = 3
+
+type Account struct {
+	ID             int64           `json:"id"`
+	Name           string          `json:"name"`
+	NameURISafe    string          `json:"name_urisafe"`
+	EmailAddresses []*EmailAddress `json:"email_addresses"`
+	Password       *Password       `json:"password"`
+	Created        int64           `json:"created"`
+	LastModified   int64           `json:"lastmodified"`
+	Status         int             `json:"status"`
 }
 
-type MembershipDatabase interface {
-	GetMembershipByIdentifier(string, string) (Membership, error)
-	// GetMembershipByIdentifier(string, string, Membership) error
-	AddMembership(Membership, ...string) error
-	DeleteMembership(Membership) error
+type EmailAddress struct {
+	Address   string `json:"address"`
+	Primary   bool   `json:"primary"`
+	Confirmed bool   `json:"confirmed"`
 }
 
-type Username interface {
-	Name() string
-	URISafeName() string
-	String() string
+type Password struct {
+	Model        string `json:"model"`
+	Digest       string `json:"digest"`
+	Salt         string `json:"salt"`
+	LastModified int64  `json:"lastmodified"`
 }
 
-// type OAuth2Database interface {}
-
-type ErrNoMembership struct {
-	error
-}
-
-func (e *ErrNoMembership) String() string {
-	return "Membership does not exist"
-}
-
-func IsNotExist(e error) bool {
-
-	switch e.(type) {
-	case *ErrNoMembership:
-		return true
-	default:
-		return false
-	}
+func (a *Account) GetPassword() (password.Password, error) {
+	return nil, errors.New("Please write me")
 }

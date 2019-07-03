@@ -3,9 +3,9 @@ package www
 import (
 	"errors"
 	"fmt"
-	"github.com/aaronland/go-auth/account"
-	"github.com/aaronland/go-auth/account/membership"
-	"github.com/aaronland/go-auth/http"
+	"github.com/aaronland/go-http-auth/account"
+	"github.com/aaronland/go-http-auth/database"
+	"github.com/aaronland/go-http-auth/http"
 	"github.com/aaronland/go-http-cookie"
 	"github.com/aaronland/go-http-sanitize"
 	"html/template"
@@ -38,15 +38,15 @@ func DefaultEmailPasswordAuthenticatorOptions() *EmailPasswordAuthenticatorOptio
 
 type EmailPasswordAuthenticator struct {
 	http.HTTPAuthenticator
-	membership_db account.MembershipDatabase
-	options       *EmailPasswordAuthenticatorOptions
+	account_db database.AccountDatabase
+	options    *EmailPasswordAuthenticatorOptions
 }
 
-func NewEmailPasswordAuthenticator(db account.MembershipDatabase, opts *EmailPasswordAuthenticatorOptions) (http.HTTPAuthenticator, error) {
+func NewEmailPasswordAuthenticator(db database.AccountDatabase, opts *EmailPasswordAuthenticatorOptions) (http.HTTPAuthenticator, error) {
 
 	auth := EmailPasswordAuthenticator{
-		membership_db: db,
-		options:       opts,
+		account_db: db,
+		options:    opts,
 	}
 
 	return &auth, nil
@@ -134,14 +134,14 @@ func (auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Templa
 				return
 			}
 
-			m, err := auth.membership_db.GetMembershipByIdentifier("email", str_email)
+			acct, err := auth.account_db.GetAccountByEmailAddress(str_email)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
 				return
 			}
 
-			p, err := membership.GetPassword(m)
+			p, err := acct.GetPassword()
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -236,26 +236,23 @@ func (auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Templa
 				return
 			}
 
-			m, err := membership.NewIndividualMembershipFromStrings(str_email, str_password, str_username)
+			// FIX ME
+
+			acct, err := membership.NewIndividualMembershipFromStrings(str_email, str_password, str_username)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
 				return
 			}
 
-			alt_keys := []string{
-				"email",
-				"username",
-			}
-
-			err = auth.membership_db.AddMembership(m, alt_keys...)
+			err = auth.account_db.AddAccount(acct)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
 				return
 			}
 
-			err = auth.setAuthCookie(rsp, m)
+			err = auth.setAuthCookie(rsp, acct)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -342,7 +339,7 @@ func (auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Templ
 
 }
 
-func (auth *EmailPasswordAuthenticator) GetMembershipForRequest(req *go_http.Request) (account.Membership, error) {
+func (auth *EmailPasswordAuthenticator) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
 
 	ck, err := auth.newAuthCookie()
 
@@ -371,13 +368,13 @@ func (auth *EmailPasswordAuthenticator) GetMembershipForRequest(req *go_http.Req
 	id := parts[0]
 	pswd := parts[1]
 
-	m, err := auth.membership_db.GetMembershipByIdentifier("id", id)
+	acct, err := auth.account_db.GetAccountById(id)
 
 	if err != nil {
 		return nil, err
 	}
 
-	p, err := membership.GetPassword(m)
+	p, err := acct.GetPassword(m)
 
 	if p.Digest() != pswd {
 		return nil, errors.New("Invalid user")
@@ -391,9 +388,9 @@ func (auth *EmailPasswordAuthenticator) newAuthCookie() (cookie.Cookie, error) {
 	return cookie.NewAuthCookie(auth.options.CookieName, auth.options.CookieSecret, auth.options.CookieSalt)
 }
 
-func (auth *EmailPasswordAuthenticator) setAuthCookie(rsp go_http.ResponseWriter, m account.Membership) error {
+func (auth *EmailPasswordAuthenticator) setAuthCookie(rsp go_http.ResponseWriter, acct *account.Account) error {
 
-	p, err := membership.GetPassword(m)
+	p, err := acct.GetPassword()
 
 	if err != nil {
 		return err

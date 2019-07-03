@@ -2,6 +2,8 @@ github.com/aaronland/go-artisanal-integers v0.1.0 h1:WN00aqbjfElOD8dUngFMOdd9wEW
 github.com/aaronland/go-artisanal-integers v0.1.0/go.mod h1:00F0qOpuZZkzWiSSEQYk6Ul1Oc5kwgcYgsfYRmuR+wY=
 github.com/aaronland/go-artisanal-integers-proxy v0.1.0 h1:OYJk6iEd3IBpdPOjPaCmF0sN7j6wjKsH65g38lpj4RA=
 github.com/aaronland/go-artisanal-integers-proxy v0.1.0/go.mod h1:Dylvjaghl8WY0gA6tOj1YE/X2FXjyDTu9LtAiYXl+oI=
+github.com/aaronland/go-auth v0.0.1 h1:yrvPDy1iRyGlDATnBUT9QwsZDB38b1CYoEbgtw3xxiE=
+github.com/aaronland/go-auth v0.0.1/go.mod h1:M28canw32hQoGwWYNANWgPfvklA0lMQw2GAT0ZYQg+I=
 github.com/aaronland/go-brooklynintegers-api v1.0.1 h1:HrEo98HD5YOfC/slzkROCxMuZTeCpT3srf1G+eO9sX8=
 github.com/aaronland/go-brooklynintegers-api v1.0.1/go.mod h1:aZ4tIFeMdAQRSLZYfGdAiDeBWUHDQkFdqZ9091mk8H8=
 github.com/aaronland/go-http-cookie v0.0.1 h1:959T6avQiw2b5cHBleizLB8uYO5e1udlt0grIEy9h0o=
