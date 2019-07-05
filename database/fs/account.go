@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"github.com/aaronland/go-http-auth/account"
 	"github.com/aaronland/go-http-auth/database"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
+	"time"
 )
 
 const FSDATABASE_POINTERS string = "pointers"
@@ -17,7 +19,7 @@ const FSDATABASE_ACCOUNTS string = "accounts"
 type FSAccountDatabase struct {
 	database.AccountDatabase
 	root string
-	mu *sync.RWMutex
+	mu   *sync.RWMutex
 }
 
 func NewFSAccountDatabase(root string) (database.AccountDatabase, error) {
@@ -65,8 +67,8 @@ func (db *FSAccountDatabase) AddAccount(acct *account.Account) (*account.Account
 	defer db.mu.Unlock()
 
 	pointers := map[string]string{
-		"address":  acct.Address.URI,
-		"username": acct.Username.Safe,
+		"address": acct.Address.URI,
+		"url":     acct.Username.Safe,
 	}
 
 	for key, id := range pointers {
@@ -103,6 +105,84 @@ func (db *FSAccountDatabase) AddAccount(acct *account.Account) (*account.Account
 	return acct, nil
 }
 
+func (db *FSAccountDatabase) UpdateAccount(acct *account.Account) (*account.Account, error) {
+
+     now := time.Now()
+     acct.LastModified = now.Unix()
+
+     acct_path := db.accountPath(acct.ID)
+     err := marshalData(acct, acct_path)
+
+     if err != nil {
+	return nil, err
+     }
+
+     // SOMETHING SOMETHING SOMETHING POINTERS
+
+     return acct, nil
+}
+
+func (db *FSAccountDatabase) DeleteAccount(acct *account.Account) (*account.Account, error) {
+
+     // SOMETHING SOMETHING SOMETHING POINTERS
+     // SOMETHING SOMETHING SOMETHING MOVE TO "DELETED"...
+
+     acct.Status = account.ACCOUNT_STATUS_DELETED
+     return db.UpdateAccount(acct)
+}
+
+func (db *FSAccountDatabase) GetAccountByID(acct_id int64) (*account.Account, error) {
+
+	acct_path := db.accountPath(acct_id)
+
+	acct, err := unmarshalData(acct_path, "account")
+
+	if err != nil {
+		return nil, err
+	}
+
+	return acct.(*account.Account), nil
+}
+
+func (db *FSAccountDatabase) GetAccountByEmailAddress(addr string) (*account.Account, error) {
+	return db.getAccountByPointer("address", addr)
+}
+
+func (db *FSAccountDatabase) GetAccountByURL(addr string) (*account.Account, error) {
+	return db.getAccountByPointer("url", addr)
+}
+
+func (db *FSAccountDatabase) getAccountByPointer(pointer_key string, pointer_id string) (*account.Account, error) {
+
+	acct_id, err := db.getPointer(pointer_key, pointer_id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return db.GetAccountByID(acct_id)
+}
+
+func (db *FSAccountDatabase) getPointer(pointer_key string, pointer_id string) (int64, error) {
+
+	pointer_path := db.pointerPath(pointer_key, pointer_id)
+
+	fh, err := os.Open(pointer_path)
+
+	if err != nil {
+		return -1, err
+	}
+
+	body, err := ioutil.ReadAll(fh)
+
+	if err != nil {
+		return -1, err
+	}
+
+	str_id := string(body)
+	return strconv.ParseInt(str_id, 10, 64)
+}
+
 func (db *FSAccountDatabase) setPointers(acct_id int64, pointers map[string]string) error {
 
 	for pointer_key, pointer_id := range pointers {
@@ -126,7 +206,7 @@ func (db *FSAccountDatabase) setPointer(acct_id int64, pointer_key string, point
 	if err != nil {
 		return err
 	}
-	
+
 	str_id := strconv.FormatInt(acct_id, 10)
 
 	_, err = fh.Write([]byte(str_id))
