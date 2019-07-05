@@ -1,8 +1,8 @@
 package database
 
 import (
-       "errors"
-       "github.com/aaronland/go-artisanal-integers"
+	"errors"
+	"github.com/aaronland/go-artisanal-integers"
 	"github.com/aaronland/go-artisanal-integers-proxy"
 	"github.com/whosonfirst/go-whosonfirst-pool"
 	"sync"

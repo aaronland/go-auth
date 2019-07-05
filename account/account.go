@@ -32,7 +32,7 @@ type Username struct {
 
 type Address struct {
 	Model     string `json:"model"`
-	Address   string `json:"address"`
+	URI       string `json:"uri"`
 	Confirmed bool   `json:"confirmed"`
 }
 
@@ -86,7 +86,7 @@ func NewAccount(email_raw string, password_raw string, username_raw string) (*Ac
 
 	addr := &Address{
 		Model:     "email",
-		Address:   emails[0].Address,
+		URI:       emails[0].Address,
 		Confirmed: false,
 	}
 

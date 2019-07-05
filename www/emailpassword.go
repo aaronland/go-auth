@@ -244,7 +244,7 @@ func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Tem
 				return
 			}
 
-			err = ep_auth.account_db.AddAccount(acct)
+			acct, err = ep_auth.account_db.AddAccount(acct)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)

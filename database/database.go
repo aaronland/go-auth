@@ -27,8 +27,8 @@ func IsNotExist(e error) bool {
 type AccountDatabase interface {
 	GetAccountByID(int64) (*account.Account, error)
 	GetAccountByEmailAddress(string) (*account.Account, error)
-	GetAccountByNameURISafe(string) (*account.Account, error)
-	AddAccount(*account.Account) error
-	UpdateAccount(*account.Account) error
-	DeleteAccount(*account.Account) error
+	GetAccountByURL(string) (*account.Account, error)
+	AddAccount(*account.Account) (*account.Account, error)
+	UpdateAccount(*account.Account) (*account.Account, error)
+	DeleteAccount(*account.Account) (*account.Account, error)
 }

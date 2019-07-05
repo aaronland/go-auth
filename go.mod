@@ -9,6 +9,7 @@ require (
 	github.com/aaronland/go-password v0.0.1
 	github.com/aaronland/go-ucd-username v0.1.0
 	github.com/whosonfirst/go-whosonfirst-pool v0.1.0
+	github.com/whosonfirst/walk v0.0.0-20160803014805-c0a349674b73
 	golang.org/x/net v0.0.0-20190613194153-d28f0bde5980
 	golang.org/x/sys v0.0.0-20190516110030-61b9204099cb // indirect
 )
