@@ -7,6 +7,7 @@ require (
 	github.com/aaronland/go-http-rewrite v0.0.1
 	github.com/aaronland/go-http-sanitize v0.0.1
 	github.com/aaronland/go-password v0.0.1
+	github.com/aaronland/go-string v0.1.0
 	github.com/aaronland/go-ucd-username v0.1.0
 	github.com/whosonfirst/go-whosonfirst-pool v0.1.0
 	github.com/whosonfirst/walk v0.0.0-20160803014805-c0a349674b73

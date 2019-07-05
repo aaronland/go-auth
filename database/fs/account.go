@@ -107,28 +107,28 @@ func (db *FSAccountDatabase) AddAccount(acct *account.Account) (*account.Account
 
 func (db *FSAccountDatabase) UpdateAccount(acct *account.Account) (*account.Account, error) {
 
-     now := time.Now()
-     acct.LastModified = now.Unix()
+	now := time.Now()
+	acct.LastModified = now.Unix()
 
-     acct_path := db.accountPath(acct.ID)
-     err := marshalData(acct, acct_path)
+	acct_path := db.accountPath(acct.ID)
+	err := marshalData(acct, acct_path)
 
-     if err != nil {
-	return nil, err
-     }
+	if err != nil {
+		return nil, err
+	}
 
-     // SOMETHING SOMETHING SOMETHING POINTERS
+	// SOMETHING SOMETHING SOMETHING POINTERS
 
-     return acct, nil
+	return acct, nil
 }
 
 func (db *FSAccountDatabase) DeleteAccount(acct *account.Account) (*account.Account, error) {
 
-     // SOMETHING SOMETHING SOMETHING POINTERS
-     // SOMETHING SOMETHING SOMETHING MOVE TO "DELETED"...
+	// SOMETHING SOMETHING SOMETHING POINTERS
+	// SOMETHING SOMETHING SOMETHING MOVE TO "DELETED"...
 
-     acct.Status = account.ACCOUNT_STATUS_DELETED
-     return db.UpdateAccount(acct)
+	acct.Status = account.ACCOUNT_STATUS_DELETED
+	return db.UpdateAccount(acct)
 }
 
 func (db *FSAccountDatabase) GetAccountByID(acct_id int64) (*account.Account, error) {

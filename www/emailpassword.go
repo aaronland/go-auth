@@ -84,6 +84,7 @@ func (ep_auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Tem
 
 	type SigninVars struct {
 		PageTitle string
+		SigninURL string
 		SignupURL string
 		Error     error
 	}
@@ -107,6 +108,7 @@ func (ep_auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Tem
 
 			vars := SigninVars{
 				PageTitle: "Sign in",
+				SigninURL: ep_auth.options.SigninURL,
 				SignupURL: ep_auth.options.SignupURL,
 			}
 
@@ -180,6 +182,7 @@ func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Tem
 	type SignupVars struct {
 		PageTitle string
 		SigninURL string
+		SignupURL string
 		Error     error
 	}
 
@@ -199,6 +202,7 @@ func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Tem
 		vars := SignupVars{
 			PageTitle: "Sign up",
 			SigninURL: ep_auth.options.SigninURL,
+			SignupURL: ep_auth.options.SignupURL,
 		}
 
 		switch req.Method {
