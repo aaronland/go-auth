@@ -109,6 +109,15 @@ func NewAccount(email_raw string, password_raw string, username_raw string) (*Ac
 	return acct, nil
 }
 
+func (acct *Account) IsEnabled() bool {
+
+     if (acct.Status == ACCOUNT_STATUS_ENABLED){
+     	return true
+}
+
+return false
+}
+
 func (acct *Account) GetPassword() (password.Password, error) {
 	return password.NewBCryptPasswordFromDigest(acct.Password.Digest, acct.Password.Salt)
 }

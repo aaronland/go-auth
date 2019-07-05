@@ -18,7 +18,7 @@ type OAuth2Authenticator struct {
 	account_db database.AccountDatabase
 }
 
-func NewOAuth2Authenticator(db database.AccountDatabase) (http.HTTPAuthenticator, error) {
+func NewOAuth2Authenticator(db database.AccountDatabase) (auth.HTTPAuthenticator, error) {
 
 	o_auth := OAuth2Authenticator{
 		account_db: db,
@@ -31,7 +31,7 @@ func (o_auth *OAuth2Authenticator) AppendCredentialsHandler(prev go_http.Handler
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
-		acct, err := http.GetMembershipContext(req)
+		acct, err := auth.GetAccountContext(req)
 
 		if err != nil {
 			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -63,7 +63,7 @@ func (o_auth *OAuth2Authenticator) AuthHandler(next go_http.Handler) go_http.Han
 			return
 		}
 
-		if m == nil {
+		if acct == nil {
 			go_http.Error(rsp, "Forbidden", go_http.StatusForbidden)
 			return
 		}
@@ -76,15 +76,15 @@ func (o_auth *OAuth2Authenticator) AuthHandler(next go_http.Handler) go_http.Han
 }
 
 func (o_auth *OAuth2Authenticator) SigninHandler(*template.Template, string) go_http.Handler {
-	return http.NotImplementedHandler()
+	return auth.NotImplementedHandler()
 }
 
 func (o_auth *OAuth2Authenticator) SignupHandler(*template.Template, string) go_http.Handler {
-	return http.NotImplementedHandler()
+	return auth.NotImplementedHandler()
 }
 
 func (o_auth *OAuth2Authenticator) SignoutHandler(*template.Template, string) go_http.Handler {
-	return http.NotImplementedHandler()
+	return auth.NotImplementedHandler()
 }
 
 func (o_auth *OAuth2Authenticator) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {

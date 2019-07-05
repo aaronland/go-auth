@@ -15,7 +15,7 @@ type HTTPAuthenticator interface {
 	SigninHandler(*template.Template, string) go_http.Handler
 	SignupHandler(*template.Template, string) go_http.Handler
 	SignoutHandler(*template.Template, string) go_http.Handler
-	GetMembershipForRequest(*go_http.Request) (*account.Account, error)
+	GetAccountForRequest(*go_http.Request) (*account.Account, error)
 }
 
 func NotImplementedHandler() go_http.Handler {
@@ -29,7 +29,7 @@ func NotImplementedHandler() go_http.Handler {
 	return go_http.HandlerFunc(fn)
 }
 
-func SetMembershipContext(req *go_http.Request, acct *account.Account) *go_http.Request {
+func SetAccountContext(req *go_http.Request, acct *account.Account) *go_http.Request {
 
 	ctx := req.Context()
 	ctx = context.WithValue(ctx, CONTEXT_ACCOUNT_KEY, acct)
@@ -37,7 +37,7 @@ func SetMembershipContext(req *go_http.Request, acct *account.Account) *go_http.
 	return req.WithContext(ctx)
 }
 
-func GetMembershipContext(req *go_http.Request) (*account.Account, error) {
+func GetAccountContext(req *go_http.Request) (*account.Account, error) {
 
 	ctx := req.Context()
 	v := ctx.Value(CONTEXT_ACCOUNT_KEY)
@@ -58,7 +58,7 @@ func IsAuthenticated(auth HTTPAuthenticator, req *go_http.Request) (bool, error)
 		return false, err
 	}
 
-	if m == nil {
+	if acct == nil {
 		return false, nil
 	}
 
