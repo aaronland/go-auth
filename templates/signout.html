@@ -1,7 +1,9 @@
 {{ define "signout" }}
 {{ template "header" }}
 
-<p>Sign out here</p>
+<form method="POST" action="{{ .SignoutURL }}">
+<button type="submit">Sign out</button>
+</form>
 
 {{ template "footer" }}
 {{ end }}

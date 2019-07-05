@@ -248,7 +248,7 @@ func (db *FSAccountDatabase) pointerPath(key string, id string) string {
 func (db *FSAccountDatabase) accountPath(id int64) string {
 
 	str_id := strconv.FormatInt(id, 10)
-	fname := fmt.Sprintf("%s.json")
+	fname := fmt.Sprintf("%s.json", str_id)
 
 	accounts_root := filepath.Join(db.root, FSDATABASE_ACCOUNTS)
 	id_root := filepath.Join(accounts_root, str_id)

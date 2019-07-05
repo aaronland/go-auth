@@ -279,8 +279,9 @@ func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Tem
 func (ep_auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Template, t_name string) go_http.Handler {
 
 	type SignoutVars struct {
-		PageTitle string
-		Error     error
+		PageTitle  string
+		Error      error
+		SignoutURL string
 	}
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
@@ -297,7 +298,8 @@ func (ep_auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Te
 		}
 
 		vars := SignoutVars{
-			PageTitle: "Sign out",
+			PageTitle:  "Sign out",
+			SignoutURL: ep_auth.options.SignoutURL,
 		}
 
 		switch req.Method {

@@ -1,7 +1,11 @@
 {{ define "index" }}
 {{ template "header" }}
 
-HELLO {{ .Account }}
+{{ if .Account }}
+Hello, {{ .Account.Username.Raw }}
+{{ else }}
+Who are you?
+{{ end }}
 
 {{ template "footer" }}
 {{ end }}
