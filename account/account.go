@@ -111,11 +111,11 @@ func NewAccount(email_raw string, password_raw string, username_raw string) (*Ac
 
 func (acct *Account) IsEnabled() bool {
 
-     if (acct.Status == ACCOUNT_STATUS_ENABLED){
-     	return true
-}
+	if acct.Status == ACCOUNT_STATUS_ENABLED {
+		return true
+	}
 
-return false
+	return false
 }
 
 func (acct *Account) GetPassword() (password.Password, error) {

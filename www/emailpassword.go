@@ -385,7 +385,7 @@ func (ep_auth *EmailPasswordAuthenticator) GetAccountForRequest(req *go_http.Req
 		return nil, errors.New("Invalid user")
 	}
 
-	if !acct.IsEnabled(){
+	if !acct.IsEnabled() {
 		return nil, errors.New("User is not active")
 	}
 
