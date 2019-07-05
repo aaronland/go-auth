@@ -1,0 +1,13 @@
+{{ define "signin" }}
+{{ template "header" }}
+
+<form method="POST" action="{{ .SigninURL }}">
+  <input type="text" name="email" id="email" placeholder="Enter your email address here" />
+  <input type="password" name="password" id="password" placeholder="Enter your password here" />
+  <button type="submit">Sign in</button>
+</form>
+
+<p>Don't have an account? <a href="{{ .SignupURL }}">Sign up here</a>.</p>
+
+{{ template "footer" }}
+{{ end }}
