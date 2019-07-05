@@ -201,6 +201,12 @@ func (db *FSAccountDatabase) setPointer(acct_id int64, pointer_key string, point
 
 	pointer_path := db.pointerPath(pointer_key, pointer_id)
 
+	err := ensurePath(pointer_path)
+
+	if err != nil {
+		return err
+	}
+
 	fh, err := os.OpenFile(pointer_path, os.O_CREATE|os.O_WRONLY, 0600)
 
 	if err != nil {

@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/aaronland/go-http-auth"
+	"github.com/aaronland/go-http-auth/account"
 	"github.com/aaronland/go-http-auth/database/fs"
 	"github.com/aaronland/go-http-auth/www"
 	"github.com/aaronland/go-string/dsn"
@@ -10,6 +12,38 @@ import (
 	"log"
 	"net/http"
 )
+
+func IndexHandler(auth auth.HTTPAuthenticator, templates *template.Template, t_name string) http.Handler {
+
+	type IndexVars struct {
+		Account *account.Account
+	}
+
+	fn := func(rsp http.ResponseWriter, req *http.Request) {
+
+		acct, err := auth.GetAccountForRequest(req)
+
+		if err != nil {
+			http.Error(rsp, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		vars := IndexVars{
+			Account: acct,
+		}
+
+		err = templates.ExecuteTemplate(rsp, t_name, vars)
+
+		if err != nil {
+			http.Error(rsp, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		return
+	}
+
+	return http.HandlerFunc(fn)
+}
 
 func main() {
 
@@ -64,10 +98,12 @@ func main() {
 	signup_handler := ep_auth.SignupHandler(auth_templates, "signup")
 	signout_handler := ep_auth.SignoutHandler(auth_templates, "signout")
 
+	index_handler := IndexHandler(ep_auth, auth_templates, "index")
+
 	/*
-	signin_handler = crumb.EnsureCrumbHandler(crumb_cfg, signin_handler)
-	signup_handler = crumb.EnsureCrumbHandler(crumb_cfg, signup_handler)
-	signout_handler = crumb.EnsureCrumbHandler(crumb_cfg, signout_handler)
+		signin_handler = crumb.EnsureCrumbHandler(crumb_cfg, signin_handler)
+		signup_handler = crumb.EnsureCrumbHandler(crumb_cfg, signup_handler)
+		signout_handler = crumb.EnsureCrumbHandler(crumb_cfg, signout_handler)
 	*/
 
 	mux := http.NewServeMux()
@@ -75,6 +111,7 @@ func main() {
 	mux.Handle(ep_opts.SigninURL, signin_handler)
 	mux.Handle(ep_opts.SignupURL, signup_handler)
 	mux.Handle(ep_opts.SignoutURL, signout_handler)
+	mux.Handle(ep_opts.RootURL, index_handler)
 
 	endpoint := fmt.Sprintf("%s:%d", *host, *port)
 	log.Printf("Listening for requests on %s\n", endpoint)
@@ -85,4 +122,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
