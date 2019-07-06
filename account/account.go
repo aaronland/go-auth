@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/aaronland/go-password"
 	"github.com/aaronland/go-ucd-username"
-	_ "github.com/pquerna/otp"
+	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"net/mail"
 	"time"
@@ -47,8 +47,8 @@ type Password struct {
 }
 
 type MFA struct {
-	Model  string `json:"model"`
-	URI string `json:"uri"`
+	Model string `json:"model"`
+	URL   string `json:"uri"`
 }
 
 func NewAccount(email_raw string, password_raw string, username_raw string) (*Account, error) {
@@ -121,10 +121,11 @@ func NewAccount(email_raw string, password_raw string, username_raw string) (*Ac
 
 	mfa := &MFA{
 		Model: "totp",
-		URI:   totp_key.URL(),
+		URL:   totp_key.URL(),
 	}
 
 	acct := &Account{
+		// ID: -1,
 		Address:      addr,
 		Password:     pswd,
 		Username:     uname,
@@ -148,4 +149,16 @@ func (acct *Account) IsEnabled() bool {
 
 func (acct *Account) GetPassword() (password.Password, error) {
 	return password.NewBCryptPasswordFromDigest(acct.Password.Digest, acct.Password.Salt)
+}
+
+func (acct *Account) GetMFASecret() (string, error) {
+
+	mfa := acct.MFA
+	key, err := otp.NewKeyFromURL(mfa.URL)
+
+	if err != nil {
+		return "", err
+	}
+
+	return key.Secret(), nil
 }

@@ -56,6 +56,7 @@ github.com/whosonfirst/go-whosonfirst-pool
 # github.com/whosonfirst/walk v0.0.0-20160803014805-c0a349674b73
 github.com/whosonfirst/walk
 # golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+golang.org/x/crypto/ssh/terminal
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/nacl/secretbox
 golang.org/x/crypto/scrypt
@@ -68,5 +69,6 @@ golang.org/x/crypto/pbkdf2
 golang.org/x/net/html
 golang.org/x/net/html/atom
 # golang.org/x/sys v0.0.0-20190516110030-61b9204099cb
-golang.org/x/sys/cpu
 golang.org/x/sys/unix
+golang.org/x/sys/windows
+golang.org/x/sys/cpu
