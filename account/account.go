@@ -4,6 +4,8 @@ import (
 	"errors"
 	"github.com/aaronland/go-password"
 	"github.com/aaronland/go-ucd-username"
+	_ "github.com/pquerna/otp"
+	"github.com/pquerna/otp/totp"
 	"net/mail"
 	"time"
 )
@@ -20,6 +22,7 @@ type Account struct {
 	Address      *Address  `json:"address"`
 	Password     *Password `json:"password"`
 	Username     *Username `json:"username"`
+	MFA          *MFA      `json:"mfa"`
 	Created      int64     `json:"created"`
 	LastModified int64     `json:"lastmodified"`
 	Status       int       `json:"status"`
@@ -41,6 +44,11 @@ type Password struct {
 	Digest       string `json:"digest"`
 	Salt         string `json:"salt"`
 	LastModified int64  `json:"lastmodified"`
+}
+
+type MFA struct {
+	Model  string `json:"model"`
+	URI string `json:"uri"`
 }
 
 func NewAccount(email_raw string, password_raw string, username_raw string) (*Account, error) {
@@ -77,6 +85,20 @@ func NewAccount(email_raw string, password_raw string, username_raw string) (*Ac
 		return nil, err
 	}
 
+	totp_issuer := "FIX ME"
+	totp_account := emails[0].Address
+
+	totp_opts := totp.GenerateOpts{
+		Issuer:      totp_issuer,
+		AccountName: totp_account,
+	}
+
+	totp_key, err := totp.Generate(totp_opts)
+
+	if err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 
 	uname := &Username{
@@ -97,10 +119,16 @@ func NewAccount(email_raw string, password_raw string, username_raw string) (*Ac
 		LastModified: now.Unix(),
 	}
 
+	mfa := &MFA{
+		Model: "totp",
+		URI:   totp_key.URL(),
+	}
+
 	acct := &Account{
 		Address:      addr,
 		Password:     pswd,
 		Username:     uname,
+		MFA:          mfa,
 		Created:      now.Unix(),
 		LastModified: now.Unix(),
 		Status:       ACCOUNT_STATUS_PENDING,
