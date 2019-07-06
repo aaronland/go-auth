@@ -3,9 +3,9 @@ package otp
 import (
 	"github.com/aaronland/go-http-auth"
 	_ "github.com/aaronland/go-http-auth/account"
+	_ "github.com/aaronland/go-http-cookie"
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
-	_ "github.com/aaronland/go-http-cookie"
 	"html/template"
 	go_http "net/http"
 	"time"
@@ -18,14 +18,11 @@ type TOTPAuthenticatorOptions struct {
 	CookieTTL    time.Duration
 }
 
-// please make this work...
-// func TOTPHandler(templates *template.Template, t_name string, other go_http.Handler) go_http.Handler {
-
-func TOTPHandler(templates *template.Template, t_name string) go_http.Handler {
+func TOTPHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
 
 	type TOTPVars struct {
-		PageTitle  string
-		Error      error
+		PageTitle string
+		Error     error
 	}
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
@@ -38,7 +35,7 @@ func TOTPHandler(templates *template.Template, t_name string) go_http.Handler {
 		}
 
 		if acct == nil {
-			// what?
+			next.ServeHTTP(rsp, req)
 			return
 		}
 
@@ -89,6 +86,7 @@ func TOTPHandler(templates *template.Template, t_name string) go_http.Handler {
 			// new TOTP cookie here
 			// set TOTP cookie here... with what?
 
+			next.ServeHTTP(rsp, req)
 			return
 
 		default:
