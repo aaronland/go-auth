@@ -16,6 +16,8 @@ github.com/aaronland/go-missionintegers-api v0.1.0 h1:huuTG5CaJBye+Eng+kSxbKwm2S
 github.com/aaronland/go-missionintegers-api v0.1.0/go.mod h1:LZEM5+MkPX5RehLxTEv+3Y3cqMSYEk86qBa+aVecnKw=
 github.com/aaronland/go-password v0.0.1 h1:8akbY8yj2ktsyMKIHKfmFJHvKZtY9jXAHdvMNGxMu6s=
 github.com/aaronland/go-password v0.0.1/go.mod h1:Q/aLEVmpLERC+WnX9qYXEAni4sYbgba8rur26QNKo6U=
+github.com/aaronland/go-password v0.0.2 h1:4cQDcaFxVqnmaXVx0pcyjLSaZ5IAXQcHV6F9kl87kM4=
+github.com/aaronland/go-password v0.0.2/go.mod h1:DZ4DdO333/dkvvJFGAUcrB0ZuxCVTSSyFPmMyeSXk+M=
 github.com/aaronland/go-secretbox v0.1.0 h1:1M4LVD/qvdmZac+vjhjPt1SDobv++cASt8izGSrzN4U=
 github.com/aaronland/go-secretbox v0.1.0/go.mod h1:HdQrEPwc1KCsqMzmC6OCDFt31JnDhkTl3waaHTXYW3g=
 github.com/aaronland/go-string v0.1.0 h1:HU6OHmEpN2m9b5SOIwU6HoOq87Fvemj/0g6DTp8yzpk=

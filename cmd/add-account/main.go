@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"github.com/aaronland/go-http-auth/account"
 	"github.com/aaronland/go-http-auth/database/fs"
+	"github.com/aaronland/go-password/cli"
 	"github.com/aaronland/go-string/dsn"
-	"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"
-	"strings"
-	"syscall"
 )
 
 func main() {
@@ -65,40 +63,25 @@ func main() {
 
 	if *password == "" {
 
-		for {
+		pswd_opts := cli.DefaultGetPasswordOptions()
+		pswd, err := cli.GetPassword(pswd_opts)
 
-			fmt.Print("Enter Password: ")
-
-			pswd1, err := terminal.ReadPassword(int(syscall.Stdin))
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			fmt.Println("")
-			fmt.Print("Enter Password (again): ")
-
-			pswd2, err := terminal.ReadPassword(int(syscall.Stdin))
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			fmt.Println("")
-
-			if strings.Compare(string(pswd1), string(pswd2)) != 0 {
-				log.Println("Passwords do not match")
-				continue
-			}
-
-			*password = string(pswd1)
-			break
+		if err != nil {
+			log.Fatal(err)
 		}
+
+		*password = pswd
 	}
 
-	// scrub email, password, username here...
+	// scrub, validate and sanity check email, password, username here...
 
 	acct, err := account.NewAccount(*email, *password, *username)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	acct, err = account_db.AddAccount(acct)
 
 	if err != nil {
 		log.Fatal(err)
@@ -111,13 +94,4 @@ func main() {
 	}
 
 	log.Println(acct.ID, secret)
-	return
-
-	acct, err = account_db.AddAccount(acct)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Println(acct.ID)
 }

@@ -17,8 +17,9 @@ github.com/aaronland/go-http-sanitize
 github.com/aaronland/go-londonintegers-api
 # github.com/aaronland/go-missionintegers-api v0.1.0
 github.com/aaronland/go-missionintegers-api
-# github.com/aaronland/go-password v0.0.1
+# github.com/aaronland/go-password v0.0.2
 github.com/aaronland/go-password
+github.com/aaronland/go-password/cli
 # github.com/aaronland/go-secretbox v0.1.0
 github.com/aaronland/go-secretbox
 # github.com/aaronland/go-string v0.1.0
