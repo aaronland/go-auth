@@ -5,9 +5,18 @@ import (
 	_ "github.com/aaronland/go-http-auth/account"
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
+	_ "github.com/aaronland/go-http-cookie"
 	"html/template"
 	go_http "net/http"
+	"time"
 )
+
+type TOTPAuthenticatorOptions struct {
+	CookieName   string
+	CookieSecret string
+	CookieSalt   string
+	CookieTTL    time.Duration
+}
 
 // please make this work...
 // func TOTPHandler(templates *template.Template, t_name string, other go_http.Handler) go_http.Handler {
@@ -32,6 +41,9 @@ func TOTPHandler(templates *template.Template, t_name string) go_http.Handler {
 			// what?
 			return
 		}
+
+		// get TOTP cookie here
+		// check TOTP cookie here
 
 		vars := TOTPVars{
 			PageTitle: "Two-Factor Authentication",
@@ -74,7 +86,9 @@ func TOTPHandler(templates *template.Template, t_name string) go_http.Handler {
 				return
 			}
 
-			// what? set cookie...
+			// new TOTP cookie here
+			// set TOTP cookie here... with what?
+
 			return
 
 		default:
