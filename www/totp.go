@@ -1,4 +1,4 @@
-package otp
+package www
 
 import (
 	"github.com/aaronland/go-http-auth"
@@ -11,14 +11,14 @@ import (
 	"time"
 )
 
-type TOTPAuthenticatorOptions struct {
+type TOTPAuthHandlerOptions struct {
 	CookieName   string
 	CookieSecret string
 	CookieSalt   string
 	CookieTTL    time.Duration
 }
 
-func TOTPHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func TOTPAuthHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
 
 	type TOTPVars struct {
 		PageTitle string
@@ -41,6 +41,13 @@ func TOTPHandler(templates *template.Template, t_name string, next go_http.Handl
 
 		// get TOTP cookie here
 		// check TOTP cookie here
+
+		cookie_ok := false
+
+		if cookie_ok {
+			next.ServeHTTP(rsp, req)
+			return
+		}
 
 		vars := TOTPVars{
 			PageTitle: "Two-Factor Authentication",
