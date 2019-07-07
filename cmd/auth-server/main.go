@@ -88,6 +88,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	totp_opts := www.DefaultTOTPAuthenticatorOptions()
+
+	totp_auth, err := NewTOTPAuthenticator(account_db, totp_opts)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	auth_templates, err := template.ParseGlob(*templates)
 
 	if err != nil {
@@ -95,6 +103,7 @@ func main() {
 	}
 
 	signin_handler := ep_auth.SigninHandler(auth_templates, "signin")
+
 	signup_handler := ep_auth.SignupHandler(auth_templates, "signup")
 	signout_handler := ep_auth.SignoutHandler(auth_templates, "signout")
 

@@ -47,8 +47,20 @@ type Password struct {
 }
 
 type MFA struct {
-	Model string `json:"model"`
-	URL   string `json:"uri"`
+	Model    string `json:"model"`
+	URL      string `json:"uri"`
+	LastAuth int64  `json:"lastauth"`
+}
+
+func (mfa *MFA) GetSecret() (string, error) {
+
+	key, err := otp.NewKeyFromURL(mfa.URL)
+
+	if err != nil {
+		return "", err
+	}
+
+	return key.Secret(), nil
 }
 
 func NewAccount(email_raw string, password_raw string, username_raw string) (*Account, error) {
@@ -154,11 +166,10 @@ func (acct *Account) GetPassword() (password.Password, error) {
 func (acct *Account) GetMFASecret() (string, error) {
 
 	mfa := acct.MFA
-	key, err := otp.NewKeyFromURL(mfa.URL)
 
-	if err != nil {
-		return "", err
+	if mfa == nil {
+		return "", errors.New("MFA is not configured for account")
 	}
 
-	return key.Secret(), nil
+	return mfa.GetSecret()
 }

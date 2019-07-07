@@ -1,9 +1,10 @@
 package www
 
 import (
+	"errors"
 	"github.com/aaronland/go-http-auth"
 	_ "github.com/aaronland/go-http-auth/account"
-	_ "github.com/aaronland/go-http-cookie"
+	"github.com/aaronland/go-http-auth/database"
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
 	"html/template"
@@ -11,14 +12,81 @@ import (
 	"time"
 )
 
-type TOTPAuthHandlerOptions struct {
-	CookieName   string
-	CookieSecret string
-	CookieSalt   string
-	CookieTTL    time.Duration
+type TOTPAuthenticatorOptions struct {
+	TTL       int64 // please make this a time.Duration...
+	SigninUrl string
 }
 
-func TOTPAuthHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func DefaultTOTPAuthenticatorOptions() *TOTPAuthenticatorOptions {
+
+	opts := TOTPAuthenticatorOptions{
+		TTL:       3600,
+		SigninUrl: "/mfa",
+	}
+
+	return &opts
+}
+
+type TOTPAuthenticator struct {
+	// auth.HTTPAuthenticator
+	account_db database.AccountDatabase
+	options    *TOTPAuthenticatorOptions
+}
+
+func NewTOTPAuthenticator(db database.AccountDatabase, opts *TOTPAuthenticatorOptions) (*TOTPAuthenticator, error) {
+
+	totp_auth := TOTPAuthenticator{
+		account_db: db,
+		options:    opts,
+	}
+
+	return &totp_auth, nil
+}
+
+func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Handler {
+
+	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
+
+		acct, err := auth.GetAccountContext(req)
+
+		if err != nil {
+			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			return
+		}
+
+		if acct == nil {
+			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			return
+		}
+
+		mfa := acct.MFA
+
+		if mfa == nil {
+			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			return
+		}
+
+		require_code := true
+
+		now := time.Now()
+
+		if now.Unix()-mfa.LastAuth > totp_auth.TTL {
+			require_code = true
+		}
+
+		if require_code {
+			go_http.Redirect(rsp, req, totp_auth.options.SigninURL, 303)
+			return
+		}
+
+		req = auth.SetAccountContext(req, acct)
+		next.ServeHTTP(rsp, req)
+	}
+
+	return go_http.HandlerFunc(fn)
+}
+
+func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, t_name string) go_http.Handler {
 
 	type TOTPVars struct {
 		PageTitle string
@@ -35,17 +103,21 @@ func TOTPAuthHandler(templates *template.Template, t_name string, next go_http.H
 		}
 
 		if acct == nil {
-			next.ServeHTTP(rsp, req)
+			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
 			return
 		}
 
-		// get TOTP cookie here
-		// check TOTP cookie here
+		mfa := acct.MFA
 
-		cookie_ok := false
+		if mfa == nil {
+			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			return
+		}
 
-		if cookie_ok {
-			next.ServeHTTP(rsp, req)
+		secret, err := mfa.GetSecret()
+
+		if err != nil {
+			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
 			return
 		}
 
@@ -76,24 +148,37 @@ func TOTPAuthHandler(templates *template.Template, t_name string, next go_http.H
 				return
 			}
 
-			secret, err := acct.GetMFASecret()
+			valid := totp.Validate(str_code, secret)
+
+			if !valid {
+
+				vars.Error = errors.New("Invalid code")
+				err := templates.ExecuteTemplate(rsp, t_name, vars)
+
+				if err != nil {
+					go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+					return
+				}
+
+				return
+			}
+
+			now := time.Now()
+			ts := now.Unix()
+
+			mfa.LastAuth = ts
+			acct.MFA = mfa
+
+			acct, err = totp_auth.account_db.UpdateAccount(acct)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
 				return
 			}
 
-			valid := totp.Validate(str_code, secret)
+			req = auth.SetAccountContext(req, acct)
 
-			if !valid {
-				// what?
-				return
-			}
-
-			// new TOTP cookie here
-			// set TOTP cookie here... with what?
-
-			next.ServeHTTP(rsp, req)
+			// REDIRECT HERE...
 			return
 
 		default:

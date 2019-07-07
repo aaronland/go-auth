@@ -165,6 +165,14 @@ func (ep_auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Tem
 				return
 			}
 
+			require_totp := false
+
+			if require_totp {
+
+			}
+
+			// TOTP stuff goes here...
+
 			go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303)
 			return
 
