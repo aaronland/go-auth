@@ -63,6 +63,19 @@ func (mfa *MFA) GetSecret() (string, error) {
 	return key.Secret(), nil
 }
 
+func (mfa *MFA) GetCode() (string, error) {
+
+	key, err := otp.NewKeyFromURL(mfa.URL)
+
+	if err != nil {
+		return "", err
+	}
+
+	now := time.Now()
+
+	return totp.GenerateCode(key.Secret(), now)
+}
+
 func NewAccount(email_raw string, password_raw string, username_raw string) (*Account, error) {
 
 	emails, err := mail.ParseAddressList(email_raw)
