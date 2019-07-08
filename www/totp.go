@@ -2,6 +2,7 @@ package www
 
 import (
 	"errors"
+	"fmt"
 	"github.com/aaronland/go-http-auth"
 	"github.com/aaronland/go-http-auth/account"
 	"github.com/aaronland/go-http-auth/database"
@@ -25,13 +26,15 @@ func NewTOTPRedirectHandler(totp_uri string) go_http.Handler {
 
 type TOTPAuthenticatorOptions struct {
 	TTL       int64 // please make this a time.Duration...
+	Force     bool
 	SigninUrl string
 }
 
 func DefaultTOTPAuthenticatorOptions() *TOTPAuthenticatorOptions {
 
 	opts := TOTPAuthenticatorOptions{
-		TTL:       3600,
+		TTL:       60,
+		Force:     false,
 		SigninUrl: "/mfa",
 	}
 
@@ -69,7 +72,7 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 		}
 
 		if acct == nil {
-			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			next.ServeHTTP(rsp, req)
 			return
 		}
 
@@ -81,15 +84,26 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 		}
 
 		require_code := true
+		log.Println("TOTP REQUIRE", require_code, req.URL.Path)
 
-		now := time.Now()
+		if !totp_auth.options.Force {
 
-		if now.Unix()-mfa.LastAuth > totp_auth.options.TTL {
-			require_code = true
+			now := time.Now()
+			diff := now.Unix() - mfa.LastAuth
+
+			if diff < totp_auth.options.TTL {
+				require_code = false
+			}
+
+			log.Println("TOTP REQUIRE", require_code, diff, totp_auth.options.TTL)
 		}
 
 		if require_code {
-			go_http.Redirect(rsp, req, totp_auth.options.SigninUrl, 303) // FIX ME...
+
+			redir_url := fmt.Sprintf("%s?redir=%s", totp_auth.options.SigninUrl, req.URL.Path)
+			log.Println("REDIR", redir_url)
+
+			go_http.Redirect(rsp, req, redir_url, 303)
 			return
 		}
 
@@ -104,6 +118,8 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 
 	type TOTPVars struct {
 		PageTitle string
+		SigninUrl string
+		Redirect  string
 		Error     error
 	}
 
@@ -130,8 +146,6 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 
 		secret, err := mfa.GetSecret()
 
-		log.Println("SECRET", err)
-
 		if err != nil {
 			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
 			return
@@ -139,13 +153,18 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 
 		vars := TOTPVars{
 			PageTitle: "Two-Factor Authentication",
+			SigninUrl: totp_auth.options.SigninUrl,
+		}
+
+		redir, err := sanitize.RequestString(req, "redir")
+
+		if err != nil {
+			vars.Redirect = redir
 		}
 
 		switch req.Method {
 
 		case "GET":
-
-		log.Println("TOTP GET")
 
 			err := templates.ExecuteTemplate(rsp, t_name, vars)
 
@@ -157,8 +176,6 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 			return
 
 		case "POST":
-
-		log.Println("TOTP POST")
 
 			str_code, err := sanitize.PostString(req, "code")
 
@@ -197,6 +214,7 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 
 			req = auth.SetAccountContext(req, acct)
 
+			log.Println("TOTP", "NEXT", next)
 			next.ServeHTTP(rsp, req)
 			return
 

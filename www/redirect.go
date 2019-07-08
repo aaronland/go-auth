@@ -2,6 +2,7 @@ package www
 
 import (
 	"github.com/aaronland/go-http-sanitize"
+	"log"
 	go_http "net/http"
 )
 
@@ -30,6 +31,8 @@ func NewRedirectHandler(opts *RedirectHandlerOptions) go_http.Handler {
 			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
 			return
 		}
+
+		log.Println("REDIRECT", req.URL.Path, redir, err)
 
 		if redir == "" {
 			redir = opts.RootURL

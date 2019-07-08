@@ -1,19 +1,19 @@
 package main
 
 import (
-       "fmt"
-       "flag"
-       "log"
+	"flag"
+	"fmt"
 	"github.com/aaronland/go-http-auth/database/fs"
 	"github.com/aaronland/go-string/dsn"
+	"log"
 )
 
 func main() {
 
 	addr := flag.String("email", "", "...")
-     accts_dsn := flag.String("accounts-dsn", "", "...")
+	accts_dsn := flag.String("accounts-dsn", "", "...")
 
-     flag.Parse()
+	flag.Parse()
 
 	accts_cfg, err := dsn.StringToDSNWithKeys(*accts_dsn, "root")
 
