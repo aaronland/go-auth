@@ -6,14 +6,14 @@ import (
 	go_http "net/http"
 )
 
-type RedirectHandlerOptions struct {
+type QueryRedirectHandlerOptions struct {
 	RootURL           string
 	RedirectParameter string
 }
 
-func DefaultRedirectHandlerOptions() *RedirectHandlerOptions {
+func DefaultQueryRedirectHandlerOptions() *QueryRedirectHandlerOptions {
 
-	opts := RedirectHandlerOptions{
+	opts := QueryRedirectHandlerOptions{
 		RootURL:           "/",
 		RedirectParameter: "redir",
 	}
@@ -21,7 +21,17 @@ func DefaultRedirectHandlerOptions() *RedirectHandlerOptions {
 	return &opts
 }
 
-func NewRedirectHandler(opts *RedirectHandlerOptions) go_http.Handler {
+func NewRedirectHandler(uri string) go_http.Handler {
+
+	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
+		go_http.Redirect(rsp, req, uri, 303)
+		return
+	}
+
+	return go_http.HandlerFunc(fn)
+}
+
+func NewQueryRedirectHandler(opts *QueryRedirectHandlerOptions) go_http.Handler {
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 

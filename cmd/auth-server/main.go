@@ -64,6 +64,11 @@ func main() {
 	accts_dsn := flag.String("accounts-dsn", "", "...")
 	cookie_dsn := flag.String("cookie-dsn", "", "...")
 
+	// require_mfa := flag.Bool("require-mfa", true, "...")
+
+	mfa_signin_url := flag.String("mfa-signin-url", "/mfa", "...")
+	mfa_ttl := flag.Int64("mfa-ttl", 3600, "...")
+
 	// please update to use this
 	// https://gocloud.dev/howto/secrets
 
@@ -87,8 +92,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	rd_opts := www.DefaultRedirectHandlerOptions()
-	rd_handler := www.NewRedirectHandler(rd_opts)
+	auth_templates, err := template.ParseGlob(*templates)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	query_redirect_opts := www.DefaultQueryRedirectHandlerOptions()
+	query_redirect_handler := www.NewQueryRedirectHandler(query_redirect_opts)
 
 	ep_opts := www.DefaultEmailPasswordAuthenticatorOptions()
 
@@ -102,29 +113,38 @@ func main() {
 		log.Fatal(err)
 	}
 
-	totp_opts := www.DefaultTOTPAuthenticatorOptions()
+	common_totp_opts := www.DefaultTOTPAuthenticatorOptions()
+	common_totp_opts.SigninUrl = *mfa_signin_url
+	common_totp_opts.TTL = *mfa_ttl
 
-	totp_auth, err := www.NewTOTPAuthenticator(account_db, totp_opts)
+	strict_totp_opts := www.DefaultTOTPAuthenticatorOptions()
+	strict_totp_opts.SigninUrl = *mfa_signin_url
+	strict_totp_opts.Force = true
+
+	common_totp_auth, err := www.NewTOTPAuthenticator(account_db, common_totp_opts)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	auth_templates, err := template.ParseGlob(*templates)
+	strict_totp_auth, err := www.NewTOTPAuthenticator(account_db, strict_totp_opts)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	totp_url := "/mfa"
+	mfa_redirect_handler := www.NewRedirectHandler(*mfa_signin_url)
 
-	totp_redirect_handler := www.NewTOTPRedirectHandler(totp_url)
+	mfa_signin_handler := strict_totp_auth.SigninHandler(auth_templates, "totp", query_redirect_handler)
+	mfa_signin_handler = ep_auth.AuthHandler(mfa_signin_handler)
 
-	signin_handler := ep_auth.SigninHandler(auth_templates, "signin", totp_redirect_handler)
-	signup_handler := ep_auth.SignupHandler(auth_templates, "signup", rd_handler)
-	signout_handler := ep_auth.SignoutHandler(auth_templates, "signout", rd_handler)
+	signin_handler := ep_auth.SigninHandler(auth_templates, "signin", mfa_redirect_handler)
+	signup_handler := ep_auth.SignupHandler(auth_templates, "signup", query_redirect_handler)
+	signout_handler := ep_auth.SignoutHandler(auth_templates, "signout", query_redirect_handler)
 
 	index_handler := IndexHandler(ep_auth, auth_templates, "index")
+	index_handler = common_totp_auth.AuthHandler(index_handler)
+	index_handler = ep_auth.AuthHandler(index_handler)
 
 	/*
 		signin_handler = crumb.EnsureCrumbHandler(crumb_cfg, signin_handler)
@@ -132,22 +152,19 @@ func main() {
 		signout_handler = crumb.EnsureCrumbHandler(crumb_cfg, signout_handler)
 	*/
 
+	pswd_handler := PasswordHandler(ep_auth, auth_templates, "password")
+	pswd_handler = strict_totp_auth.AuthHandler(pswd_handler)
+	pswd_handler = ep_auth.AuthHandler(pswd_handler)
+
 	mux := http.NewServeMux()
 
 	mux.Handle(ep_opts.SigninURL, signin_handler)
 	mux.Handle(ep_opts.SignupURL, signup_handler)
 	mux.Handle(ep_opts.SignoutURL, signout_handler)
+
+	mux.Handle(*mfa_signin_url, mfa_signin_handler)
+
 	mux.Handle(ep_opts.RootURL, index_handler)
-
-	totp_signin_handler := totp_auth.SigninHandler(auth_templates, "totp", rd_handler)
-	totp_signin_handler = ep_auth.AuthHandler(totp_signin_handler)
-
-	mux.Handle(totp_url, totp_signin_handler)
-
-	pswd_handler := PasswordHandler(ep_auth, auth_templates, "password")
-	pswd_handler = totp_auth.AuthHandler(pswd_handler)
-	pswd_handler = ep_auth.AuthHandler(pswd_handler)
-
 	mux.Handle("/password", pswd_handler)
 
 	endpoint := fmt.Sprintf("%s:%d", *host, *port)

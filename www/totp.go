@@ -1,6 +1,7 @@
 package www
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/aaronland/go-http-auth"
@@ -14,15 +15,7 @@ import (
 	"time"
 )
 
-func NewTOTPRedirectHandler(totp_uri string) go_http.Handler {
-
-	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
-		go_http.Redirect(rsp, req, totp_uri, 303)
-		return
-	}
-
-	return go_http.HandlerFunc(fn)
-}
+const CONTEXT_TOTP_KEY string = "totp"
 
 type TOTPAuthenticatorOptions struct {
 	TTL       int64 // please make this a time.Duration...
@@ -33,7 +26,7 @@ type TOTPAuthenticatorOptions struct {
 func DefaultTOTPAuthenticatorOptions() *TOTPAuthenticatorOptions {
 
 	opts := TOTPAuthenticatorOptions{
-		TTL:       60,
+		TTL:       3600,
 		Force:     false,
 		SigninUrl: "/mfa",
 	}
@@ -61,8 +54,7 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
-		// this will not work when the user hits "submit" because we lose
-		// the current context and we need to read from the cookie again...
+		log.Println("TOTP", "AUTH", "CHECK")
 
 		acct, err := totp_auth.GetAccountForRequest(req)
 
@@ -83,6 +75,9 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 			return
 		}
 
+		ts, err := GetTOTPContext(req)
+		log.Println("TOTP", "CONTEXT", ts, err)
+
 		require_code := true
 		log.Println("TOTP REQUIRE", require_code, req.URL.Path)
 
@@ -94,14 +89,14 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 			if diff < totp_auth.options.TTL {
 				require_code = false
 			}
-
-			log.Println("TOTP REQUIRE", require_code, diff, totp_auth.options.TTL)
 		}
+
+		log.Println("TOTP", "AUTH", "REQUIRE", require_code)
 
 		if require_code {
 
 			redir_url := fmt.Sprintf("%s?redir=%s", totp_auth.options.SigninUrl, req.URL.Path)
-			log.Println("REDIR", redir_url)
+			log.Println("TOTP", "AUTH", "REDIRECT", redir_url)
 
 			go_http.Redirect(rsp, req, redir_url, 303)
 			return
@@ -158,7 +153,7 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 
 		redir, err := sanitize.RequestString(req, "redir")
 
-		if err != nil {
+		if err == nil {
 			vars.Redirect = redir
 		}
 
@@ -213,8 +208,9 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 			}
 
 			req = auth.SetAccountContext(req, acct)
+			req = SetTOTPContext(req)
 
-			log.Println("TOTP", "NEXT", next)
+			log.Println("TOTP", "OKAY", "NEXT")
 			next.ServeHTTP(rsp, req)
 			return
 
@@ -237,4 +233,27 @@ func (totp_auth *TOTPAuthenticator) SignoutHandler(templates *template.Template,
 
 func (totp_auth *TOTPAuthenticator) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
 	return auth.GetAccountContext(req)
+}
+
+func SetTOTPContext(req *go_http.Request) *go_http.Request {
+
+	now := time.Now()
+
+	ctx := req.Context()
+	ctx = context.WithValue(ctx, CONTEXT_TOTP_KEY, now.Unix())
+
+	return req.WithContext(ctx)
+}
+
+func GetTOTPContext(req *go_http.Request) (int64, error) {
+
+	ctx := req.Context()
+	v := ctx.Value(CONTEXT_TOTP_KEY)
+
+	if v == nil {
+		return -1, nil
+	}
+
+	ts := v.(int64)
+	return ts, nil
 }
