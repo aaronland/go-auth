@@ -75,15 +75,15 @@ func (o_auth *OAuth2Authenticator) AuthHandler(next go_http.Handler) go_http.Han
 	return go_http.HandlerFunc(fn)
 }
 
-func (o_auth *OAuth2Authenticator) SigninHandler(*template.Template, string) go_http.Handler {
+func (o_auth *OAuth2Authenticator) SigninHandler(*template.Template, string, go_http.Handler) go_http.Handler {
 	return auth.NotImplementedHandler()
 }
 
-func (o_auth *OAuth2Authenticator) SignupHandler(*template.Template, string) go_http.Handler {
+func (o_auth *OAuth2Authenticator) SignupHandler(*template.Template, string, go_http.Handler) go_http.Handler {
 	return auth.NotImplementedHandler()
 }
 
-func (o_auth *OAuth2Authenticator) SignoutHandler(*template.Template, string) go_http.Handler {
+func (o_auth *OAuth2Authenticator) SignoutHandler(*template.Template, string, go_http.Handler) go_http.Handler {
 	return auth.NotImplementedHandler()
 }
 

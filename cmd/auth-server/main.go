@@ -76,6 +76,9 @@ func main() {
 		log.Fatal(err)
 	}
 
+	rd_opts := www.DefaultRedirectHandlerOptions()
+	rd_handler := www.NewRedirectHandler(rd_opts)
+
 	ep_opts := www.DefaultEmailPasswordAuthenticatorOptions()
 
 	ep_opts.CookieName = cookie_cfg["name"]
@@ -90,7 +93,7 @@ func main() {
 
 	totp_opts := www.DefaultTOTPAuthenticatorOptions()
 
-	totp_auth, err := NewTOTPAuthenticator(account_db, totp_opts)
+	totp_auth, err := www.NewTOTPAuthenticator(account_db, totp_opts)
 
 	if err != nil {
 		log.Fatal(err)
@@ -102,10 +105,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	signin_handler := ep_auth.SigninHandler(auth_templates, "signin")
+	totp_signin_handler := totp_auth.SigninHandler(auth_templates, "totp", rd_handler)
 
-	signup_handler := ep_auth.SignupHandler(auth_templates, "signup")
-	signout_handler := ep_auth.SignoutHandler(auth_templates, "signout")
+	signin_handler := ep_auth.SigninHandler(auth_templates, "signin", totp_signin_handler)
+	signup_handler := ep_auth.SignupHandler(auth_templates, "signup", rd_handler)
+	signout_handler := ep_auth.SignoutHandler(auth_templates, "signout", rd_handler)
 
 	index_handler := IndexHandler(ep_auth, auth_templates, "index")
 

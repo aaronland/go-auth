@@ -3,7 +3,7 @@ package www
 import (
 	"errors"
 	"github.com/aaronland/go-http-auth"
-	_ "github.com/aaronland/go-http-auth/account"
+	"github.com/aaronland/go-http-auth/account"
 	"github.com/aaronland/go-http-auth/database"
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
@@ -28,12 +28,12 @@ func DefaultTOTPAuthenticatorOptions() *TOTPAuthenticatorOptions {
 }
 
 type TOTPAuthenticator struct {
-	// auth.HTTPAuthenticator
+	auth.HTTPAuthenticator
 	account_db database.AccountDatabase
 	options    *TOTPAuthenticatorOptions
 }
 
-func NewTOTPAuthenticator(db database.AccountDatabase, opts *TOTPAuthenticatorOptions) (*TOTPAuthenticator, error) {
+func NewTOTPAuthenticator(db database.AccountDatabase, opts *TOTPAuthenticatorOptions) (auth.HTTPAuthenticator, error) {
 
 	totp_auth := TOTPAuthenticator{
 		account_db: db,
@@ -47,7 +47,7 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
-		acct, err := auth.GetAccountContext(req)
+		acct, err := totp_auth.GetAccountForRequest(req)
 
 		if err != nil {
 			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -70,12 +70,12 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 
 		now := time.Now()
 
-		if now.Unix()-mfa.LastAuth > totp_auth.TTL {
+		if now.Unix()-mfa.LastAuth > totp_auth.options.TTL {
 			require_code = true
 		}
 
 		if require_code {
-			go_http.Redirect(rsp, req, totp_auth.options.SigninURL, 303)
+			go_http.Redirect(rsp, req, totp_auth.options.SigninUrl, 303) // FIX ME...
 			return
 		}
 
@@ -86,7 +86,7 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 	return go_http.HandlerFunc(fn)
 }
 
-func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, t_name string) go_http.Handler {
+func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
 
 	type TOTPVars struct {
 		PageTitle string
@@ -178,7 +178,7 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 
 			req = auth.SetAccountContext(req, acct)
 
-			// REDIRECT HERE...
+			next.ServeHTTP(rsp, req)
 			return
 
 		default:
@@ -188,4 +188,16 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 	}
 
 	return go_http.HandlerFunc(fn)
+}
+
+func (totp_auth *TOTPAuthenticator) SignupHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+	return auth.NotImplementedHandler()
+}
+
+func (totp_auth *TOTPAuthenticator) SignoutHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+	return auth.NotImplementedHandler()
+}
+
+func (totp_auth *TOTPAuthenticator) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
+	return auth.GetAccountContext(req)
 }

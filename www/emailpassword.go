@@ -80,7 +80,7 @@ func (ep_auth *EmailPasswordAuthenticator) AuthHandler(next go_http.Handler) go_
 	return go_http.HandlerFunc(fn)
 }
 
-func (ep_auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Template, t_name string) go_http.Handler {
+func (ep_auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
 
 	type SigninVars struct {
 		PageTitle string
@@ -98,7 +98,8 @@ func (ep_auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Tem
 		}
 
 		if ok {
-			go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303) // check for ?redir=
+			// go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303) // check for ?redir=
+			next.ServeHTTP(rsp, req)
 			return
 		}
 
@@ -171,9 +172,8 @@ func (ep_auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Tem
 
 			}
 
-			// TOTP stuff goes here...
-
-			go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303)
+			// go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303)
+			next.ServeHTTP(rsp, req)
 			return
 
 		default:
@@ -185,7 +185,7 @@ func (ep_auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Tem
 	return go_http.HandlerFunc(fn)
 }
 
-func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Template, t_name string) go_http.Handler {
+func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
 
 	type SignupVars struct {
 		PageTitle string
@@ -203,7 +203,7 @@ func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Tem
 		}
 
 		if ok {
-			go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303) // check for ?redir=
+			next.ServeHTTP(rsp, req)
 			return
 		}
 
@@ -270,9 +270,7 @@ func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Tem
 				return
 			}
 
-			// FIX ME: CHECK COOKIE...
-
-			go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303)
+			next.ServeHTTP(rsp, req)
 			return
 
 		default:
@@ -284,7 +282,7 @@ func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Tem
 	return go_http.HandlerFunc(fn)
 }
 
-func (ep_auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Template, t_name string) go_http.Handler {
+func (ep_auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
 
 	type SignoutVars struct {
 		PageTitle  string
@@ -301,7 +299,7 @@ func (ep_auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Te
 		}
 
 		if !ok {
-			go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303)
+			next.ServeHTTP(rsp, req)
 			return
 		}
 
@@ -339,7 +337,7 @@ func (ep_auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Te
 				return
 			}
 
-			go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303)
+			next.ServeHTTP(rsp, req)
 			return
 
 		default:

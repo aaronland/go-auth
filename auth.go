@@ -12,9 +12,9 @@ const CONTEXT_ACCOUNT_KEY string = "account"
 type HTTPAuthenticator interface {
 	AuthHandler(go_http.Handler) go_http.Handler
 	AppendCredentialsHandler(go_http.Handler) go_http.Handler
-	SigninHandler(*template.Template, string) go_http.Handler
-	SignupHandler(*template.Template, string) go_http.Handler
-	SignoutHandler(*template.Template, string) go_http.Handler
+	SigninHandler(*template.Template, string, go_http.Handler) go_http.Handler
+	SignupHandler(*template.Template, string, go_http.Handler) go_http.Handler
+	SignoutHandler(*template.Template, string, go_http.Handler) go_http.Handler
 	GetAccountForRequest(*go_http.Request) (*account.Account, error)
 }
 

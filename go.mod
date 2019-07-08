@@ -5,7 +5,7 @@ require (
 	github.com/aaronland/go-artisanal-integers-proxy v0.1.0
 	github.com/aaronland/go-http-cookie v0.0.1
 	github.com/aaronland/go-http-rewrite v0.0.1
-	github.com/aaronland/go-http-sanitize v0.0.1
+	github.com/aaronland/go-http-sanitize v0.0.2
 	github.com/aaronland/go-password v0.0.2
 	github.com/aaronland/go-string v0.1.0
 	github.com/aaronland/go-ucd-username v0.1.0

@@ -10,6 +10,8 @@ github.com/aaronland/go-http-rewrite v0.0.1 h1:nQ4qqtOC0QHpEhQeFpRRwdXAEwuhHhgsx
 github.com/aaronland/go-http-rewrite v0.0.1/go.mod h1:g62jjXpsArD0lzJLs9bVLR9Locdt3f4OmqFkkJL2rQU=
 github.com/aaronland/go-http-sanitize v0.0.1 h1:35rmeJh9Kx9mphGJXitQ6dOsC2fEPdn9sJa6JpYPd/c=
 github.com/aaronland/go-http-sanitize v0.0.1/go.mod h1:qUi4rzUPcpMntpUFnHK00yQI5vd/Q7x9MFYwX91/ygI=
+github.com/aaronland/go-http-sanitize v0.0.2 h1:pBUFT7i9t3q8meBucKFttusQ8GCQwZoWe24CA7Ia/zo=
+github.com/aaronland/go-http-sanitize v0.0.2/go.mod h1:qUi4rzUPcpMntpUFnHK00yQI5vd/Q7x9MFYwX91/ygI=
 github.com/aaronland/go-londonintegers-api v0.1.0 h1:YcP3lAQcBym4s2BMKlLT96CZWvhDMRmo/UyAL2/gN5A=
 github.com/aaronland/go-londonintegers-api v0.1.0/go.mod h1:E0VIcwks+So4FL1FYAQzrO5/OVOUsFPsqW85UrZArSE=
 github.com/aaronland/go-missionintegers-api v0.1.0 h1:huuTG5CaJBye+Eng+kSxbKwm2SBmeM1YMkO6C+eTVbo=
