@@ -8,9 +8,20 @@ import (
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
 	"html/template"
+	"log"
 	go_http "net/http"
 	"time"
 )
+
+func NewTOTPRedirectHandler(totp_uri string) go_http.Handler {
+
+	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
+		go_http.Redirect(rsp, req, totp_uri, 303)
+		return
+	}
+
+	return go_http.HandlerFunc(fn)
+}
 
 type TOTPAuthenticatorOptions struct {
 	TTL       int64 // please make this a time.Duration...
@@ -46,6 +57,9 @@ func NewTOTPAuthenticator(db database.AccountDatabase, opts *TOTPAuthenticatorOp
 func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Handler {
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
+
+		// this will not work when the user hits "submit" because we lose
+		// the current context and we need to read from the cookie again...
 
 		acct, err := totp_auth.GetAccountForRequest(req)
 
@@ -103,18 +117,20 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 		}
 
 		if acct == nil {
-			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			go_http.Error(rsp, "No user", go_http.StatusInternalServerError)
 			return
 		}
 
 		mfa := acct.MFA
 
 		if mfa == nil {
-			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			go_http.Error(rsp, "MFA not configured", go_http.StatusInternalServerError)
 			return
 		}
 
 		secret, err := mfa.GetSecret()
+
+		log.Println("SECRET", err)
 
 		if err != nil {
 			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -123,12 +139,13 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 
 		vars := TOTPVars{
 			PageTitle: "Two-Factor Authentication",
-			// SignoutURL: ep_auth.options.SignoutURL,
 		}
 
 		switch req.Method {
 
 		case "GET":
+
+		log.Println("TOTP GET")
 
 			err := templates.ExecuteTemplate(rsp, t_name, vars)
 
@@ -140,6 +157,8 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 			return
 
 		case "POST":
+
+		log.Println("TOTP POST")
 
 			str_code, err := sanitize.PostString(req, "code")
 

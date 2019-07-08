@@ -61,15 +61,22 @@ func NewFSAccountDatabase(root string) (database.AccountDatabase, error) {
 	return db, nil
 }
 
+func (db *FSAccountDatabase) pointersMap(acct *account.Account) map[string]string {
+
+	pointers_map := map[string]string{
+		"address": acct.Address.URI,
+		"url":     acct.Username.Safe,
+	}
+
+	return pointers_map
+}
+
 func (db *FSAccountDatabase) AddAccount(acct *account.Account) (*account.Account, error) {
 
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	pointers := map[string]string{
-		"address": acct.Address.URI,
-		"url":     acct.Username.Safe,
-	}
+	pointers := db.pointersMap(acct)
 
 	for key, id := range pointers {
 
@@ -117,18 +124,34 @@ func (db *FSAccountDatabase) UpdateAccount(acct *account.Account) (*account.Acco
 		return nil, err
 	}
 
-	// SOMETHING SOMETHING SOMETHING POINTERS
+	pointers_map := db.pointersMap(acct)
+
+	err = db.setPointers(acct.ID, pointers_map)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return acct, nil
 }
 
 func (db *FSAccountDatabase) DeleteAccount(acct *account.Account) (*account.Account, error) {
 
-	// SOMETHING SOMETHING SOMETHING POINTERS
-	// SOMETHING SOMETHING SOMETHING MOVE TO "DELETED"...
-
 	acct.Status = account.ACCOUNT_STATUS_DELETED
-	return db.UpdateAccount(acct)
+	acct, err := db.UpdateAccount(acct)
+
+	if err != nil {
+		return nil, err
+	}
+
+	pointers_map := db.pointersMap(acct)
+
+	for pointer_key, pointer_id := range pointers_map {
+		pointer_path := db.pointerPath(pointer_key, pointer_id)
+		os.Remove(pointer_path)
+	}
+
+	return acct, nil
 }
 
 func (db *FSAccountDatabase) GetAccountByID(acct_id int64) (*account.Account, error) {

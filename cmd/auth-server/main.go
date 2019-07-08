@@ -45,6 +45,17 @@ func IndexHandler(auth auth.HTTPAuthenticator, templates *template.Template, t_n
 	return http.HandlerFunc(fn)
 }
 
+func PasswordHandler(auth auth.HTTPAuthenticator, templates *template.Template, t_name string) http.Handler {
+
+	fn := func(rsp http.ResponseWriter, req *http.Request) {
+
+		rsp.Write([]byte("PASSWORD"))
+		return
+	}
+
+	return http.HandlerFunc(fn)
+}
+
 func main() {
 
 	host := flag.String("host", "localhost", "...")
@@ -105,9 +116,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	totp_signin_handler := totp_auth.SigninHandler(auth_templates, "totp", rd_handler)
+	totp_url := "/mfa"
 
-	signin_handler := ep_auth.SigninHandler(auth_templates, "signin", totp_signin_handler)
+	totp_redirect_handler := www.NewTOTPRedirectHandler(totp_url)
+
+	signin_handler := ep_auth.SigninHandler(auth_templates, "signin", totp_redirect_handler)
 	signup_handler := ep_auth.SignupHandler(auth_templates, "signup", rd_handler)
 	signout_handler := ep_auth.SignoutHandler(auth_templates, "signout", rd_handler)
 
@@ -125,6 +138,17 @@ func main() {
 	mux.Handle(ep_opts.SignupURL, signup_handler)
 	mux.Handle(ep_opts.SignoutURL, signout_handler)
 	mux.Handle(ep_opts.RootURL, index_handler)
+
+	totp_signin_handler := totp_auth.SigninHandler(auth_templates, "totp", rd_handler)
+	totp_signin_handler = ep_auth.AuthHandler(totp_signin_handler)
+
+	mux.Handle(totp_url, totp_signin_handler)
+
+	pswd_handler := PasswordHandler(ep_auth, auth_templates, "password")
+	pswd_handler = totp_auth.AuthHandler(pswd_handler)
+	pswd_handler = ep_auth.AuthHandler(pswd_handler)
+
+	mux.Handle("/password", pswd_handler)
 
 	endpoint := fmt.Sprintf("%s:%d", *host, *port)
 	log.Printf("Listening for requests on %s\n", endpoint)

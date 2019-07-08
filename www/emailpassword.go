@@ -166,13 +166,8 @@ func (ep_auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Tem
 				return
 			}
 
-			require_totp := false
+			req = auth.SetAccountContext(req, acct)
 
-			if require_totp {
-
-			}
-
-			// go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303)
 			next.ServeHTTP(rsp, req)
 			return
 

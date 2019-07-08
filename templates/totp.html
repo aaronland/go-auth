@@ -1,0 +1,16 @@
+{{ define "totp" }}
+{{ template "header" }}
+
+<h2>Two-factor authentication required</h2>
+
+{{ if .Error }}
+<p>Two factor authentication failed: <code>{{ .Error }}</code></p>
+{{ end }}
+
+<form method="POST">
+  <input type="text" name="code" id="code" placeholder="Enter your MFA code here" />
+  <button type="submit">Continue</button>
+</form>
+
+{{ template "footer" }}
+{{ end }}
