@@ -104,7 +104,7 @@ func NewAccount(email_raw string, password_raw string, username_raw string) (*Ac
 		return nil, err
 	}
 
-	bcrypt_pswd, err := password.NewBCryptPassword(password_raw)
+	pswd, err := newPassword(password_raw)
 
 	if err != nil {
 		return nil, err
@@ -137,13 +137,6 @@ func NewAccount(email_raw string, password_raw string, username_raw string) (*Ac
 		Confirmed: false,
 	}
 
-	pswd := &Password{
-		Model:        "bcrypt",
-		Digest:       bcrypt_pswd.Digest(),
-		Salt:         bcrypt_pswd.Salt(),
-		LastModified: now.Unix(),
-	}
-
 	mfa := &MFA{
 		Model: "totp",
 		URL:   totp_key.URL(),
@@ -174,6 +167,38 @@ func (acct *Account) IsEnabled() bool {
 	}
 
 	return true
+}
+
+func (acct *Account) UpdatePassword(password_raw string) (*Account, error) {
+
+	pswd, err := newPassword(password_raw)
+
+	if err != nil {
+		return acct, err
+	}
+
+	acct.Password = pswd
+	return acct, nil
+}
+
+func newPassword(password_raw string) (*Password, error) {
+
+	bcrypt_pswd, err := password.NewBCryptPassword(password_raw)
+
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+
+	pswd := &Password{
+		Model:        "bcrypt",
+		Digest:       bcrypt_pswd.Digest(),
+		Salt:         bcrypt_pswd.Salt(),
+		LastModified: now.Unix(),
+	}
+
+	return pswd, nil
 }
 
 func (acct *Account) GetPassword() (password.Password, error) {

@@ -82,6 +82,9 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 
 		if totp_auth.options.Force {
 
+			// check to see if we've already auth-ed on this page
+			// in the last (n) seconds
+
 			if totp_cookie_err == nil {
 
 				ok, _ := totp_auth.isRequestCookie(req, totp_cookie)
@@ -275,7 +278,7 @@ func (totp_auth *TOTPAuthenticator) setTOTPCookie(rsp go_http.ResponseWriter, re
 	ctx, _ := sanitize.GetString(req, "redir")
 
 	if ctx == "" {
-		  ctx = req.URL.Path
+		ctx = req.URL.Path
 	}
 
 	cookie_str := fmt.Sprintf("%d:%s", ts, ctx)
@@ -298,7 +301,7 @@ func (totp_auth *TOTPAuthenticator) isRequestCookie(req *go_http.Request, totp_c
 		return false, err
 	}
 
-	log.Printf("TOTP COOKIE CHECK '%s'\n", cookie_str)
+	log.Printf("TOTP COOKIE CHECK '%s' (%s)\n", cookie_str, req.URL.Path)
 
 	cookie_parts := strings.Split(cookie_str, ":")
 

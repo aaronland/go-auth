@@ -45,17 +45,6 @@ func IndexHandler(auth auth.HTTPAuthenticator, templates *template.Template, t_n
 	return http.HandlerFunc(fn)
 }
 
-func PasswordHandler(auth auth.HTTPAuthenticator, templates *template.Template, t_name string) http.Handler {
-
-	fn := func(rsp http.ResponseWriter, req *http.Request) {
-
-		rsp.Write([]byte("PASSWORD"))
-		return
-	}
-
-	return http.HandlerFunc(fn)
-}
-
 func main() {
 
 	host := flag.String("host", "localhost", "...")
@@ -173,7 +162,7 @@ func main() {
 	index_handler := IndexHandler(ep_auth, auth_templates, "index")
 	index_handler = common_auth_handler(index_handler)
 
-	pswd_handler := PasswordHandler(ep_auth, auth_templates, "password")
+	pswd_handler := www.PasswordHandler(ep_auth, auth_templates, "password")
 	pswd_handler = strict_auth_handler(pswd_handler)
 
 	mux := http.NewServeMux()
