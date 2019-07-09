@@ -7,12 +7,12 @@ import (
 	"github.com/aaronland/go-http-auth"
 	"github.com/aaronland/go-http-auth/account"
 	"github.com/aaronland/go-http-auth/database"
-	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
 	"html/template"
 	"log"
 	go_http "net/http"
+	"strconv"
 	"time"
 )
 
@@ -40,23 +40,13 @@ type TOTPAuthenticator struct {
 	auth.HTTPAuthenticator
 	account_db   database.AccountDatabase
 	options      *TOTPAuthenticatorOptions
-	crumb_config *crumb.CrumbConfig
 }
 
 func NewTOTPAuthenticator(db database.AccountDatabase, opts *TOTPAuthenticatorOptions) (auth.HTTPAuthenticator, error) {
 
-	crumb_cfg, err := NewCrumbConfig()
-
-	if err != nil {
-		return nil, err
-	}
-
-	crumb_cfg.TTL = 120
-
 	totp_auth := TOTPAuthenticator{
 		account_db:   db,
 		options:      opts,
-		crumb_config: crumb_cfg,
 	}
 
 	return &totp_auth, nil
@@ -65,8 +55,6 @@ func NewTOTPAuthenticator(db database.AccountDatabase, opts *TOTPAuthenticatorOp
 func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Handler {
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
-
-		log.Println("TOTP", "AUTH", "CHECK")
 
 		acct, err := totp_auth.GetAccountForRequest(req)
 
@@ -88,7 +76,6 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 		}
 
 		require_code := true
-		log.Println("TOTP REQUIRE", require_code, req.URL.Path)
 
 		if totp_auth.options.Force {
 
@@ -98,13 +85,7 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 
 				crumb_var := crumb_cookie.Value
 
-				log.Println("TOTP", "CRUMB", "VALIDATE", crumb_var)
-
-				ok, err := crumb.ValidateCrumb(totp_auth.crumb_config, req, crumb_var)
-
-				log.Println("TOTP", "CRUMB", "RESULT", err)
-
-				if ok {
+				if crumb_var != "" {
 					require_code = false
 				}
 			}
@@ -119,13 +100,8 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 			}
 		}
 
-		log.Println("TOTP", "AUTH", "REQUIRE", require_code)
-
 		if require_code {
-
 			redir_url := fmt.Sprintf("%s?redir=%s", totp_auth.options.SigninUrl, req.URL.Path)
-			log.Println("TOTP", "AUTH", "REDIRECT", redir_url)
-
 			go_http.Redirect(rsp, req, redir_url, 303)
 			return
 		}
@@ -237,10 +213,6 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 
 			if totp_auth.options.Force {
 
-				crumb_var, err := crumb.GenerateCrumb(totp_auth.crumb_config, req)
-
-				log.Println("CRUMB", "SET", crumb_var)
-
 				if err != nil {
 					go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
 					return
@@ -248,16 +220,14 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 
 				crumb_cookie := go_http.Cookie{
 					Name:   COOKIE_TOTP_CRUMB,
-					Value:  crumb_var,
-					MaxAge: int(totp_auth.crumb_config.TTL) - 1,
+					Value:  strconv.FormatInt(ts, 10),
+					MaxAge: 300,	// custom set?
 				}
 
 				go_http.SetCookie(rsp, &crumb_cookie)
 			}
 
 			req = auth.SetAccountContext(req, acct)
-
-			log.Println("TOTP", "OKAY", "NEXT")
 			next.ServeHTTP(rsp, req)
 			return
 

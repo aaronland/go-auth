@@ -120,6 +120,7 @@ func main() {
 	strict_totp_opts := www.DefaultTOTPAuthenticatorOptions()
 	strict_totp_opts.SigninUrl = *mfa_signin_url
 	strict_totp_opts.Force = true
+	common_totp_opts.TTL = 300
 
 	common_totp_auth, err := www.NewTOTPAuthenticator(account_db, common_totp_opts)
 
