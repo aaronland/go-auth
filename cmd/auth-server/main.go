@@ -133,28 +133,33 @@ func main() {
 		log.Fatal(err)
 	}
 
+	common_auth_handler := func(final_handler http.Handler) http.Handler {
+		auth_handler := common_totp_auth.AuthHandler(final_handler)
+		auth_handler = ep_auth.AuthHandler(auth_handler)
+		return auth_handler
+	}
+
+	strict_auth_handler := func(final_handler http.Handler) http.Handler {
+		auth_handler := strict_totp_auth.AuthHandler(final_handler)
+		auth_handler = ep_auth.AuthHandler(auth_handler)
+		return auth_handler
+	}
+
 	mfa_redirect_handler := www.NewRedirectHandler(*mfa_signin_url)
 
 	mfa_signin_handler := strict_totp_auth.SigninHandler(auth_templates, "totp", query_redirect_handler)
 	mfa_signin_handler = ep_auth.AuthHandler(mfa_signin_handler)
 
 	signin_handler := ep_auth.SigninHandler(auth_templates, "signin", mfa_redirect_handler)
+
 	signup_handler := ep_auth.SignupHandler(auth_templates, "signup", query_redirect_handler)
 	signout_handler := ep_auth.SignoutHandler(auth_templates, "signout", query_redirect_handler)
 
 	index_handler := IndexHandler(ep_auth, auth_templates, "index")
-	index_handler = common_totp_auth.AuthHandler(index_handler)
-	index_handler = ep_auth.AuthHandler(index_handler)
-
-	/*
-		signin_handler = crumb.EnsureCrumbHandler(crumb_cfg, signin_handler)
-		signup_handler = crumb.EnsureCrumbHandler(crumb_cfg, signup_handler)
-		signout_handler = crumb.EnsureCrumbHandler(crumb_cfg, signout_handler)
-	*/
+	index_handler = common_auth_handler(index_handler)
 
 	pswd_handler := PasswordHandler(ep_auth, auth_templates, "password")
-	pswd_handler = strict_totp_auth.AuthHandler(pswd_handler)
-	pswd_handler = ep_auth.AuthHandler(pswd_handler)
+	pswd_handler = strict_auth_handler(pswd_handler)
 
 	mux := http.NewServeMux()
 

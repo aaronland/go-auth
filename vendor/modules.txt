@@ -9,9 +9,11 @@ github.com/aaronland/go-artisanal-integers-proxy/service
 github.com/aaronland/go-brooklynintegers-api
 # github.com/aaronland/go-http-cookie v0.0.1
 github.com/aaronland/go-http-cookie
+# github.com/aaronland/go-http-crumb v0.0.3
+github.com/aaronland/go-http-crumb
 # github.com/aaronland/go-http-rewrite v0.0.1
 github.com/aaronland/go-http-rewrite
-# github.com/aaronland/go-http-sanitize v0.0.1
+# github.com/aaronland/go-http-sanitize v0.0.2
 github.com/aaronland/go-http-sanitize
 # github.com/aaronland/go-londonintegers-api v0.1.0
 github.com/aaronland/go-londonintegers-api

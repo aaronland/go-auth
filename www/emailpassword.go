@@ -7,6 +7,7 @@ import (
 	"github.com/aaronland/go-http-auth/account"
 	"github.com/aaronland/go-http-auth/database"
 	"github.com/aaronland/go-http-cookie"
+	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-sanitize"
 	"html/template"
 	_ "log"
@@ -39,15 +40,23 @@ func DefaultEmailPasswordAuthenticatorOptions() *EmailPasswordAuthenticatorOptio
 
 type EmailPasswordAuthenticator struct {
 	auth.HTTPAuthenticator
-	account_db database.AccountDatabase
-	options    *EmailPasswordAuthenticatorOptions
+	account_db   database.AccountDatabase
+	options      *EmailPasswordAuthenticatorOptions
+	crumb_config *crumb.CrumbConfig
 }
 
 func NewEmailPasswordAuthenticator(db database.AccountDatabase, opts *EmailPasswordAuthenticatorOptions) (auth.HTTPAuthenticator, error) {
 
+	crumb_cfg, err := NewCrumbConfig()
+
+	if err != nil {
+		return nil, err
+	}
+
 	ep_auth := EmailPasswordAuthenticator{
-		account_db: db,
-		options:    opts,
+		account_db:   db,
+		options:      opts,
+		crumb_config: crumb_cfg,
 	}
 
 	return &ep_auth, nil
@@ -177,7 +186,9 @@ func (ep_auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Tem
 		}
 	}
 
-	return go_http.HandlerFunc(fn)
+	signin_handler := go_http.HandlerFunc(fn)
+
+	return crumb.EnsureCrumbHandler(ep_auth.crumb_config, signin_handler)
 }
 
 func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
@@ -274,7 +285,9 @@ func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Tem
 		}
 	}
 
-	return go_http.HandlerFunc(fn)
+	signup_handler := go_http.HandlerFunc(fn)
+
+	return crumb.EnsureCrumbHandler(ep_auth.crumb_config, signup_handler)
 }
 
 func (ep_auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
@@ -341,8 +354,9 @@ func (ep_auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Te
 		}
 	}
 
-	return go_http.HandlerFunc(fn)
+	signout_handler := go_http.HandlerFunc(fn)
 
+	return crumb.EnsureCrumbHandler(ep_auth.crumb_config, signout_handler)
 }
 
 func (ep_auth *EmailPasswordAuthenticator) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
