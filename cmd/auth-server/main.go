@@ -14,7 +14,7 @@ import (
 	"net/http"
 )
 
-func IndexHandler(auth auth.Credentials, templates *template.Template, t_name string) http.Handler {
+func IndexHandler(creds auth.Credentials, templates *template.Template, t_name string) http.Handler {
 
 	type IndexVars struct {
 		Account *account.Account
@@ -22,7 +22,7 @@ func IndexHandler(auth auth.Credentials, templates *template.Template, t_name st
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		acct, err := auth.GetAccountForRequest(req)
+		acct, err := creds.GetAccountForRequest(req)
 
 		if err != nil {
 			http.Error(rsp, err.Error(), http.StatusInternalServerError)
