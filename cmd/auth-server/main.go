@@ -62,7 +62,8 @@ func main() {
 	port := flag.Int("port", 8080, "...")
 	templates := flag.String("templates", "", "...")
 	accts_dsn := flag.String("accounts-dsn", "", "...")
-	cookie_dsn := flag.String("cookie-dsn", "", "...")
+	auth_cookie_dsn := flag.String("auth-cookie-dsn", "", "...")
+	mfa_cookie_dsn := flag.String("mfa-cookie-dsn", "", "...")
 
 	// require_mfa := flag.Bool("require-mfa", true, "...")
 
@@ -80,7 +81,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cookie_cfg, err := dsn.StringToDSNWithKeys(*cookie_dsn, "name", "secret", "salt")
+	auth_cookie_cfg, err := dsn.StringToDSNWithKeys(*auth_cookie_dsn, "name", "secret", "salt")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mfa_cookie_cfg, err := dsn.StringToDSNWithKeys(*mfa_cookie_dsn, "name", "secret", "salt")
 
 	if err != nil {
 		log.Fatal(err)
@@ -103,9 +110,9 @@ func main() {
 
 	ep_opts := www.DefaultEmailPasswordAuthenticatorOptions()
 
-	ep_opts.CookieName = cookie_cfg["name"]
-	ep_opts.CookieSecret = cookie_cfg["secret"]
-	ep_opts.CookieSalt = cookie_cfg["salt"]
+	ep_opts.CookieName = auth_cookie_cfg["name"]
+	ep_opts.CookieSecret = auth_cookie_cfg["secret"]
+	ep_opts.CookieSalt = auth_cookie_cfg["salt"]
 
 	ep_auth, err := www.NewEmailPasswordAuthenticator(account_db, ep_opts)
 
@@ -117,10 +124,17 @@ func main() {
 	common_totp_opts.SigninUrl = *mfa_signin_url
 	common_totp_opts.TTL = *mfa_ttl
 
+	common_totp_opts.CookieName = mfa_cookie_cfg["name"]
+	common_totp_opts.CookieSecret = mfa_cookie_cfg["secret"]
+	common_totp_opts.CookieSalt = mfa_cookie_cfg["salt"]
+
 	strict_totp_opts := www.DefaultTOTPAuthenticatorOptions()
 	strict_totp_opts.SigninUrl = *mfa_signin_url
 	strict_totp_opts.Force = true
-	common_totp_opts.TTL = 300
+
+	strict_totp_opts.CookieName = mfa_cookie_cfg["name"]
+	strict_totp_opts.CookieSecret = mfa_cookie_cfg["secret"]
+	strict_totp_opts.CookieSalt = mfa_cookie_cfg["salt"]
 
 	common_totp_auth, err := www.NewTOTPAuthenticator(account_db, common_totp_opts)
 

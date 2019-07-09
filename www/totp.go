@@ -7,22 +7,23 @@ import (
 	"github.com/aaronland/go-http-auth"
 	"github.com/aaronland/go-http-auth/account"
 	"github.com/aaronland/go-http-auth/database"
+	"github.com/aaronland/go-http-cookie"
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
 	"html/template"
 	"log"
 	go_http "net/http"
-	"strconv"
+	"strings"
 	"time"
 )
 
-const CONTEXT_TOTP_KEY string = "totp"
-const COOKIE_TOTP_CRUMB string = "crumb"
-
 type TOTPAuthenticatorOptions struct {
-	TTL       int64 // please make this a time.Duration...
-	Force     bool
-	SigninUrl string
+	TTL          int64 // please make this a time.Duration...
+	Force        bool
+	SigninUrl    string
+	CookieName   string
+	CookieSecret string
+	CookieSalt   string
 }
 
 func DefaultTOTPAuthenticatorOptions() *TOTPAuthenticatorOptions {
@@ -38,15 +39,15 @@ func DefaultTOTPAuthenticatorOptions() *TOTPAuthenticatorOptions {
 
 type TOTPAuthenticator struct {
 	auth.HTTPAuthenticator
-	account_db   database.AccountDatabase
-	options      *TOTPAuthenticatorOptions
+	account_db database.AccountDatabase
+	options    *TOTPAuthenticatorOptions
 }
 
 func NewTOTPAuthenticator(db database.AccountDatabase, opts *TOTPAuthenticatorOptions) (auth.HTTPAuthenticator, error) {
 
 	totp_auth := TOTPAuthenticator{
-		account_db:   db,
-		options:      opts,
+		account_db: db,
+		options:    opts,
 	}
 
 	return &totp_auth, nil
@@ -77,15 +78,15 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 
 		require_code := true
 
+		totp_cookie, totp_cookie_err := totp_auth.newTOTPCookie()
+
 		if totp_auth.options.Force {
 
-			crumb_cookie, err := req.Cookie(COOKIE_TOTP_CRUMB)
+			if totp_cookie_err == nil {
 
-			if err == nil {
+				ok, _ := totp_auth.isRequestCookie(req, totp_cookie)
 
-				crumb_var := crumb_cookie.Value
-
-				if crumb_var != "" {
+				if ok {
 					require_code = false
 				}
 			}
@@ -104,6 +105,10 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 			redir_url := fmt.Sprintf("%s?redir=%s", totp_auth.options.SigninUrl, req.URL.Path)
 			go_http.Redirect(rsp, req, redir_url, 303)
 			return
+		}
+
+		if totp_cookie != nil {
+			totp_auth.setTOTPCookie(rsp, req, totp_cookie)
 		}
 
 		req = auth.SetAccountContext(req, acct)
@@ -211,21 +216,14 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 				return
 			}
 
-			if totp_auth.options.Force {
+			totp_cookie, err := totp_auth.newTOTPCookie()
 
-				if err != nil {
-					go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
-					return
-				}
-
-				crumb_cookie := go_http.Cookie{
-					Name:   COOKIE_TOTP_CRUMB,
-					Value:  strconv.FormatInt(ts, 10),
-					MaxAge: 300,	// custom set?
-				}
-
-				go_http.SetCookie(rsp, &crumb_cookie)
+			if err != nil {
+				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				return
 			}
+
+			totp_auth.setTOTPCookie(rsp, req, totp_cookie)
 
 			req = auth.SetAccountContext(req, acct)
 			next.ServeHTTP(rsp, req)
@@ -250,4 +248,69 @@ func (totp_auth *TOTPAuthenticator) SignoutHandler(templates *template.Template,
 
 func (totp_auth *TOTPAuthenticator) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
 	return auth.GetAccountContext(req)
+}
+
+func (totp_auth *TOTPAuthenticator) newTOTPCookie() (cookie.Cookie, error) {
+
+	if totp_auth.options.CookieName == "" {
+		return nil, errors.New("Missing cookie name")
+	}
+
+	if totp_auth.options.CookieSecret == "" {
+		return nil, errors.New("Missing cookie secret")
+	}
+
+	if totp_auth.options.CookieSalt == "" {
+		return nil, errors.New("Missing cookie salt")
+	}
+
+	return cookie.NewAuthCookie(totp_auth.options.CookieName, totp_auth.options.CookieSecret, totp_auth.options.CookieSalt)
+}
+
+func (totp_auth *TOTPAuthenticator) setTOTPCookie(rsp go_http.ResponseWriter, req *go_http.Request, totp_cookie cookie.Cookie) error {
+
+	now := time.Now()
+	ts := now.Unix()
+
+	ctx, _ := sanitize.GetString(req, "redir")
+
+	if ctx == "" {
+		  ctx = req.URL.Path
+	}
+
+	cookie_str := fmt.Sprintf("%d:%s", ts, ctx)
+
+	log.Printf("TOTP COOKIE SET '%s'\n", cookie_str)
+
+	raw_cookie := &go_http.Cookie{
+		Value:  cookie_str,
+		MaxAge: 300,
+	}
+
+	return totp_cookie.SetCookie(rsp, raw_cookie)
+}
+
+func (totp_auth *TOTPAuthenticator) isRequestCookie(req *go_http.Request, totp_cookie cookie.Cookie) (bool, error) {
+
+	cookie_str, err := totp_cookie.Get(req)
+
+	if err != nil {
+		return false, err
+	}
+
+	log.Printf("TOTP COOKIE CHECK '%s'\n", cookie_str)
+
+	cookie_parts := strings.Split(cookie_str, ":")
+
+	if len(cookie_parts) != 2 {
+		return false, errors.New("Invalid cookie string")
+	}
+
+	cookie_url := cookie_parts[1]
+
+	if cookie_url != req.URL.Path {
+		return false, nil
+	}
+
+	return true, nil
 }

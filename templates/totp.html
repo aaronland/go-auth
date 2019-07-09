@@ -7,8 +7,6 @@
 <p>Two factor authentication failed: <code>{{ .Error }}</code></p>
 {{ end }}
 
-REDIR: <code>'{{ .Redirect }}'</code>.
-
 <form method="POST">
   <input type="text" name="code" id="code" placeholder="Enter your MFA code here" />
   {{ if .Redirect }}<input type="hidden" name="redir" value="{{ .Redirect }}" />{{ end }}

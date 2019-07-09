@@ -8,6 +8,8 @@ github.com/aaronland/go-brooklynintegers-api v1.0.1 h1:HrEo98HD5YOfC/slzkROCxMuZ
 github.com/aaronland/go-brooklynintegers-api v1.0.1/go.mod h1:aZ4tIFeMdAQRSLZYfGdAiDeBWUHDQkFdqZ9091mk8H8=
 github.com/aaronland/go-http-cookie v0.0.1 h1:959T6avQiw2b5cHBleizLB8uYO5e1udlt0grIEy9h0o=
 github.com/aaronland/go-http-cookie v0.0.1/go.mod h1:KF6QghGeR7w7oNqRgvc9ITFQc+iV5N9Y2SbroNkxEPY=
+github.com/aaronland/go-http-cookie v0.0.2 h1:PKJpfBL/w2ADg9sFyiOoPFhFF/QAFQYe2LSwTDsbDnI=
+github.com/aaronland/go-http-cookie v0.0.2/go.mod h1:KF6QghGeR7w7oNqRgvc9ITFQc+iV5N9Y2SbroNkxEPY=
 github.com/aaronland/go-http-crumb v0.0.3 h1:OWxjvFRQqKXckfqaFZwbxqQd+uX40H/8a9QKYMFZqGI=
 github.com/aaronland/go-http-crumb v0.0.3/go.mod h1:ctEyW8gwewZmT05jWRBm/HWNiwVw6jMyaddgndNs00Q=
 github.com/aaronland/go-http-rewrite v0.0.1 h1:nQ4qqtOC0QHpEhQeFpRRwdXAEwuhHhgsxQaV3hDT8iw=
