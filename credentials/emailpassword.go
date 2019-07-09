@@ -1,4 +1,4 @@
-package www
+package credentials
 
 import (
 	"errors"
@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-type EmailPasswordAuthenticatorOptions struct {
+type EmailPasswordCredentialsOptions struct {
 	RootURL      string
 	SigninURL    string
 	SignupURL    string
@@ -24,11 +24,12 @@ type EmailPasswordAuthenticatorOptions struct {
 	CookieName   string
 	CookieSecret string
 	CookieSalt   string
+	CrumbConfig  *crumb.CrumbConfig
 }
 
-func DefaultEmailPasswordAuthenticatorOptions() *EmailPasswordAuthenticatorOptions {
+func DefaultEmailPasswordCredentialsOptions() *EmailPasswordCredentialsOptions {
 
-	opts := EmailPasswordAuthenticatorOptions{
+	opts := EmailPasswordCredentialsOptions{
 		RootURL:    "/",
 		SigninURL:  "/signin",
 		SignupURL:  "/signup",
@@ -38,35 +39,27 @@ func DefaultEmailPasswordAuthenticatorOptions() *EmailPasswordAuthenticatorOptio
 	return &opts
 }
 
-type EmailPasswordAuthenticator struct {
-	auth.HTTPAuthenticator
-	account_db   database.AccountDatabase
-	options      *EmailPasswordAuthenticatorOptions
-	crumb_config *crumb.CrumbConfig
+type EmailPasswordCredentials struct {
+	auth.Credentials
+	account_db database.AccountDatabase
+	options    *EmailPasswordCredentialsOptions
 }
 
-func NewEmailPasswordAuthenticator(db database.AccountDatabase, opts *EmailPasswordAuthenticatorOptions) (auth.HTTPAuthenticator, error) {
+func NewEmailPasswordCredentials(db database.AccountDatabase, opts *EmailPasswordCredentialsOptions) (auth.Credentials, error) {
 
-	crumb_cfg, err := NewCrumbConfig()
-
-	if err != nil {
-		return nil, err
-	}
-
-	ep_auth := EmailPasswordAuthenticator{
-		account_db:   db,
-		options:      opts,
-		crumb_config: crumb_cfg,
+	ep_auth := EmailPasswordCredentials{
+		account_db: db,
+		options:    opts,
 	}
 
 	return &ep_auth, nil
 }
 
-func (ep_auth *EmailPasswordAuthenticator) AppendCredentialsHandler(prev go_http.Handler) go_http.Handler {
+func (ep_auth *EmailPasswordCredentials) AppendCredentialsHandler(prev go_http.Handler) go_http.Handler {
 	return auth.NotImplementedHandler()
 }
 
-func (ep_auth *EmailPasswordAuthenticator) AuthHandler(next go_http.Handler) go_http.Handler {
+func (ep_auth *EmailPasswordCredentials) AuthHandler(next go_http.Handler) go_http.Handler {
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
@@ -89,7 +82,7 @@ func (ep_auth *EmailPasswordAuthenticator) AuthHandler(next go_http.Handler) go_
 	return go_http.HandlerFunc(fn)
 }
 
-func (ep_auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
 
 	type SigninVars struct {
 		PageTitle string
@@ -188,10 +181,10 @@ func (ep_auth *EmailPasswordAuthenticator) SigninHandler(templates *template.Tem
 
 	signin_handler := go_http.HandlerFunc(fn)
 
-	return crumb.EnsureCrumbHandler(ep_auth.crumb_config, signin_handler)
+	return crumb.EnsureCrumbHandler(ep_auth.options.CrumbConfig, signin_handler)
 }
 
-func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
 
 	type SignupVars struct {
 		PageTitle string
@@ -287,10 +280,10 @@ func (ep_auth *EmailPasswordAuthenticator) SignupHandler(templates *template.Tem
 
 	signup_handler := go_http.HandlerFunc(fn)
 
-	return crumb.EnsureCrumbHandler(ep_auth.crumb_config, signup_handler)
+	return crumb.EnsureCrumbHandler(ep_auth.options.CrumbConfig, signup_handler)
 }
 
-func (ep_auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
 
 	type SignoutVars struct {
 		PageTitle  string
@@ -356,10 +349,10 @@ func (ep_auth *EmailPasswordAuthenticator) SignoutHandler(templates *template.Te
 
 	signout_handler := go_http.HandlerFunc(fn)
 
-	return crumb.EnsureCrumbHandler(ep_auth.crumb_config, signout_handler)
+	return crumb.EnsureCrumbHandler(ep_auth.options.CrumbConfig, signout_handler)
 }
 
-func (ep_auth *EmailPasswordAuthenticator) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
+func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
 
 	ck, err := ep_auth.newAuthCookie()
 
@@ -413,12 +406,17 @@ func (ep_auth *EmailPasswordAuthenticator) GetAccountForRequest(req *go_http.Req
 	return acct, nil
 }
 
-func (ep_auth *EmailPasswordAuthenticator) newAuthCookie() (cookie.Cookie, error) {
+func (ep_auth *EmailPasswordCredentials) SetAccountForResponse(rsp go_http.ResponseWriter, acct *account.Account) error {
+
+	return ep_auth.setAuthCookie(rsp, acct)
+}
+
+func (ep_auth *EmailPasswordCredentials) newAuthCookie() (cookie.Cookie, error) {
 
 	return cookie.NewAuthCookie(ep_auth.options.CookieName, ep_auth.options.CookieSecret, ep_auth.options.CookieSalt)
 }
 
-func (ep_auth *EmailPasswordAuthenticator) setAuthCookie(rsp go_http.ResponseWriter, acct *account.Account) error {
+func (ep_auth *EmailPasswordCredentials) setAuthCookie(rsp go_http.ResponseWriter, acct *account.Account) error {
 
 	p, err := acct.GetPassword()
 

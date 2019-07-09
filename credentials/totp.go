@@ -1,4 +1,4 @@
-package www
+package credentials
 
 import (
 	_ "context"
@@ -11,13 +11,13 @@ import (
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
 	"html/template"
-	"log"
+	// "log"
 	go_http "net/http"
 	"strings"
 	"time"
 )
 
-type TOTPAuthenticatorOptions struct {
+type TOTPCredentialsOptions struct {
 	TTL          int64 // please make this a time.Duration...
 	Force        bool
 	SigninUrl    string
@@ -26,9 +26,9 @@ type TOTPAuthenticatorOptions struct {
 	CookieSalt   string
 }
 
-func DefaultTOTPAuthenticatorOptions() *TOTPAuthenticatorOptions {
+func DefaultTOTPCredentialsOptions() *TOTPCredentialsOptions {
 
-	opts := TOTPAuthenticatorOptions{
+	opts := TOTPCredentialsOptions{
 		TTL:       3600,
 		Force:     false,
 		SigninUrl: "/mfa",
@@ -37,15 +37,15 @@ func DefaultTOTPAuthenticatorOptions() *TOTPAuthenticatorOptions {
 	return &opts
 }
 
-type TOTPAuthenticator struct {
-	auth.HTTPAuthenticator
+type TOTPCredentials struct {
+	auth.Credentials
 	account_db database.AccountDatabase
-	options    *TOTPAuthenticatorOptions
+	options    *TOTPCredentialsOptions
 }
 
-func NewTOTPAuthenticator(db database.AccountDatabase, opts *TOTPAuthenticatorOptions) (auth.HTTPAuthenticator, error) {
+func NewTOTPCredentials(db database.AccountDatabase, opts *TOTPCredentialsOptions) (auth.Credentials, error) {
 
-	totp_auth := TOTPAuthenticator{
+	totp_auth := TOTPCredentials{
 		account_db: db,
 		options:    opts,
 	}
@@ -53,7 +53,7 @@ func NewTOTPAuthenticator(db database.AccountDatabase, opts *TOTPAuthenticatorOp
 	return &totp_auth, nil
 }
 
-func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Handler {
+func (totp_auth *TOTPCredentials) AuthHandler(next go_http.Handler) go_http.Handler {
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
@@ -121,7 +121,7 @@ func (totp_auth *TOTPAuthenticator) AuthHandler(next go_http.Handler) go_http.Ha
 	return go_http.HandlerFunc(fn)
 }
 
-func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
 
 	type TOTPVars struct {
 		PageTitle string
@@ -241,19 +241,19 @@ func (totp_auth *TOTPAuthenticator) SigninHandler(templates *template.Template, 
 	return go_http.HandlerFunc(fn)
 }
 
-func (totp_auth *TOTPAuthenticator) SignupHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func (totp_auth *TOTPCredentials) SignupHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
 	return auth.NotImplementedHandler()
 }
 
-func (totp_auth *TOTPAuthenticator) SignoutHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
 	return auth.NotImplementedHandler()
 }
 
-func (totp_auth *TOTPAuthenticator) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
+func (totp_auth *TOTPCredentials) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
 	return auth.GetAccountContext(req)
 }
 
-func (totp_auth *TOTPAuthenticator) newTOTPCookie() (cookie.Cookie, error) {
+func (totp_auth *TOTPCredentials) newTOTPCookie() (cookie.Cookie, error) {
 
 	if totp_auth.options.CookieName == "" {
 		return nil, errors.New("Missing cookie name")
@@ -270,7 +270,7 @@ func (totp_auth *TOTPAuthenticator) newTOTPCookie() (cookie.Cookie, error) {
 	return cookie.NewAuthCookie(totp_auth.options.CookieName, totp_auth.options.CookieSecret, totp_auth.options.CookieSalt)
 }
 
-func (totp_auth *TOTPAuthenticator) setTOTPCookie(rsp go_http.ResponseWriter, req *go_http.Request, totp_cookie cookie.Cookie) error {
+func (totp_auth *TOTPCredentials) setTOTPCookie(rsp go_http.ResponseWriter, req *go_http.Request, totp_cookie cookie.Cookie) error {
 
 	now := time.Now()
 	ts := now.Unix()
@@ -283,7 +283,7 @@ func (totp_auth *TOTPAuthenticator) setTOTPCookie(rsp go_http.ResponseWriter, re
 
 	cookie_str := fmt.Sprintf("%d:%s", ts, ctx)
 
-	log.Printf("TOTP COOKIE SET '%s'\n", cookie_str)
+	// log.Printf("TOTP COOKIE SET '%s'\n", cookie_str)
 
 	raw_cookie := &go_http.Cookie{
 		Value:  cookie_str,
@@ -293,7 +293,7 @@ func (totp_auth *TOTPAuthenticator) setTOTPCookie(rsp go_http.ResponseWriter, re
 	return totp_cookie.SetCookie(rsp, raw_cookie)
 }
 
-func (totp_auth *TOTPAuthenticator) isRequestCookie(req *go_http.Request, totp_cookie cookie.Cookie) (bool, error) {
+func (totp_auth *TOTPCredentials) isRequestCookie(req *go_http.Request, totp_cookie cookie.Cookie) (bool, error) {
 
 	cookie_str, err := totp_cookie.Get(req)
 
@@ -301,7 +301,7 @@ func (totp_auth *TOTPAuthenticator) isRequestCookie(req *go_http.Request, totp_c
 		return false, err
 	}
 
-	log.Printf("TOTP COOKIE CHECK '%s' (%s)\n", cookie_str, req.URL.Path)
+	// log.Printf("TOTP COOKIE CHECK '%s' (%s)\n", cookie_str, req.URL.Path)
 
 	cookie_parts := strings.Split(cookie_str, ":")
 

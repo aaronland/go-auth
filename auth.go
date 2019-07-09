@@ -9,13 +9,14 @@ import (
 
 const CONTEXT_ACCOUNT_KEY string = "account"
 
-type HTTPAuthenticator interface {
+type Credentials interface {
 	AuthHandler(go_http.Handler) go_http.Handler
 	AppendCredentialsHandler(go_http.Handler) go_http.Handler
 	SigninHandler(*template.Template, string, go_http.Handler) go_http.Handler
 	SignupHandler(*template.Template, string, go_http.Handler) go_http.Handler
 	SignoutHandler(*template.Template, string, go_http.Handler) go_http.Handler
 	GetAccountForRequest(*go_http.Request) (*account.Account, error)
+	SetAccountForResponse(go_http.ResponseWriter, *account.Account) error
 }
 
 func NotImplementedHandler() go_http.Handler {
@@ -50,9 +51,9 @@ func GetAccountContext(req *go_http.Request) (*account.Account, error) {
 	return acct, nil
 }
 
-func IsAuthenticated(auth HTTPAuthenticator, req *go_http.Request) (bool, error) {
+func IsAuthenticated(creds Credentials, req *go_http.Request) (bool, error) {
 
-	acct, err := auth.GetAccountForRequest(req)
+	acct, err := creds.GetAccountForRequest(req)
 
 	if err != nil {
 		return false, err

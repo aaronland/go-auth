@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/aaronland/go-http-auth"
 	"github.com/aaronland/go-http-auth/account"
+	"github.com/aaronland/go-http-auth/credentials"
 	"github.com/aaronland/go-http-auth/database/fs"
 	"github.com/aaronland/go-http-auth/www"
 	"github.com/aaronland/go-string/dsn"
@@ -13,7 +14,7 @@ import (
 	"net/http"
 )
 
-func IndexHandler(auth auth.HTTPAuthenticator, templates *template.Template, t_name string) http.Handler {
+func IndexHandler(auth auth.Credentials, templates *template.Template, t_name string) http.Handler {
 
 	type IndexVars struct {
 		Account *account.Account
@@ -94,22 +95,31 @@ func main() {
 		log.Fatal(err)
 	}
 
-	query_redirect_opts := www.DefaultQueryRedirectHandlerOptions()
-	query_redirect_handler := www.NewQueryRedirectHandler(query_redirect_opts)
+	// TO DO : read from CLI
 
-	ep_opts := www.DefaultEmailPasswordAuthenticatorOptions()
-
-	ep_opts.CookieName = auth_cookie_cfg["name"]
-	ep_opts.CookieSecret = auth_cookie_cfg["secret"]
-	ep_opts.CookieSalt = auth_cookie_cfg["salt"]
-
-	ep_auth, err := www.NewEmailPasswordAuthenticator(account_db, ep_opts)
+	crumb_cfg, err := www.NewCrumbConfig()
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	common_totp_opts := www.DefaultTOTPAuthenticatorOptions()
+	query_redirect_opts := www.DefaultQueryRedirectHandlerOptions()
+	query_redirect_handler := www.NewQueryRedirectHandler(query_redirect_opts)
+
+	ep_opts := credentials.DefaultEmailPasswordCredentialsOptions()
+
+	ep_opts.CookieName = auth_cookie_cfg["name"]
+	ep_opts.CookieSecret = auth_cookie_cfg["secret"]
+	ep_opts.CookieSalt = auth_cookie_cfg["salt"]
+	ep_opts.CrumbConfig = crumb_cfg
+
+	ep_auth, err := credentials.NewEmailPasswordCredentials(account_db, ep_opts)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	common_totp_opts := credentials.DefaultTOTPCredentialsOptions()
 	common_totp_opts.SigninUrl = *mfa_signin_url
 	common_totp_opts.TTL = *mfa_ttl
 
@@ -117,7 +127,7 @@ func main() {
 	common_totp_opts.CookieSecret = mfa_cookie_cfg["secret"]
 	common_totp_opts.CookieSalt = mfa_cookie_cfg["salt"]
 
-	strict_totp_opts := www.DefaultTOTPAuthenticatorOptions()
+	strict_totp_opts := credentials.DefaultTOTPCredentialsOptions()
 	strict_totp_opts.SigninUrl = *mfa_signin_url
 	strict_totp_opts.Force = true
 
@@ -125,13 +135,13 @@ func main() {
 	strict_totp_opts.CookieSecret = mfa_cookie_cfg["secret"]
 	strict_totp_opts.CookieSalt = mfa_cookie_cfg["salt"]
 
-	common_totp_auth, err := www.NewTOTPAuthenticator(account_db, common_totp_opts)
+	common_totp_auth, err := credentials.NewTOTPCredentials(account_db, common_totp_opts)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	strict_totp_auth, err := www.NewTOTPAuthenticator(account_db, strict_totp_opts)
+	strict_totp_auth, err := credentials.NewTOTPCredentials(account_db, strict_totp_opts)
 
 	if err != nil {
 		log.Fatal(err)
@@ -162,7 +172,13 @@ func main() {
 	index_handler := IndexHandler(ep_auth, auth_templates, "index")
 	index_handler = common_auth_handler(index_handler)
 
-	pswd_handler := www.PasswordHandler(ep_auth, auth_templates, "password")
+	pswd_handler_opts := &www.PasswordHandlerOptions{
+		Credentials:     ep_auth,
+		AccountDatabase: account_db,
+		CrumbConfig:     crumb_cfg,
+	}
+
+	pswd_handler := www.PasswordHandler(pswd_handler_opts, auth_templates, "password")
 	pswd_handler = strict_auth_handler(pswd_handler)
 
 	mux := http.NewServeMux()

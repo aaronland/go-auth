@@ -1,22 +1,63 @@
 package www
 
 import (
-
+	"errors"
+	"github.com/aaronland/go-http-auth"
+	"github.com/aaronland/go-http-auth/account"
+	"github.com/aaronland/go-http-auth/database"
+	"github.com/aaronland/go-http-crumb"
+	"github.com/aaronland/go-http-sanitize"
+	"html/template"
+	_ "log"
+	"net/http"
 )
 
-func PasswordHandler(auth auth.HTTPAuthenticator, templates *template.Template, t_name string) http.Handler {
+type PasswordHandlerOptions struct {
+	Credentials     auth.Credentials
+	AccountDatabase database.AccountDatabase
+	CrumbConfig     *crumb.CrumbConfig
+}
 
-     type PasswordVars struct {
-     	Account *account.Account
-	Error error
-     }
+func PasswordHandler(opts *PasswordHandlerOptions, templates *template.Template, t_name string) http.Handler {
+
+	type PasswordVars struct {
+		Account *account.Account
+		Error   error
+	}
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		acct, err := auth.GetAccountForRequest(req)
+		acct, err := opts.Credentials.GetAccountForRequest(req)
 
 		if err != nil {
 			http.Error(rsp, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		vars := PasswordVars{
+			Account: acct,
+		}
+
+		render := func(with_vars PasswordVars) {
+
+			err := templates.ExecuteTemplate(rsp, t_name, with_vars)
+
+			if err != nil {
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
+			}
+
+			return
+		}
+
+		render_error := func(with_vars PasswordVars, err error) {
+			with_vars.Error = err
+			render(with_vars)
+			return
+		}
+
+		render_errorString := func(with_vars PasswordVars, err_str string) {
+			err := errors.New(err_str)
+			render_error(vars, err)
 			return
 		}
 
@@ -24,88 +65,76 @@ func PasswordHandler(auth auth.HTTPAuthenticator, templates *template.Template, 
 
 		case "GET":
 
-		vars := PasswordVars{
-			Account: acct,
-		}
-
-		err = templates.ExecuteTemplate(rsp, t_name, vars)
-
-		if err != nil {
-			http.Error(rsp, err.Error(), http.StatusInternalServerError)
+			render(vars)
 			return
-		}
 
 		case "POST":
 
 			str_old_password, err := sanitize.PostString(req, "old_password")
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
+				render_error(vars, err)
 				return
 			}
 
 			str_new_password, err := sanitize.PostString(req, "new_password")
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
+				render_error(vars, err)
 				return
 			}
 
 			if str_old_password == str_new_password {
-				// 
+				render_errorString(vars, "passwords are the same")
+				return
 			}
 
 			p, err := acct.GetPassword()
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				render_error(vars, err)
 				return
 			}
 
 			err = p.Compare(str_old_password)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				render_error(vars, err)
 				return
 			}
 
 			acct, err = acct.UpdatePassword(str_new_password)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				render_error(vars, err)
 				return
 			}
 
-			// FIX ME
-
-			acct, err = account_db.UpdateAccount(acct)
+			acct, err = opts.AccountDatabase.UpdateAccount(acct)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				render_error(vars, err)
 				return
 			}
 
-			// FIX ME
-
-			err = ep_auth.setAuthCookie(rsp, acct)
+			err = opts.Credentials.SetAccountForResponse(rsp, acct)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				render_error(vars, err)
 				return
 			}
 
-			// redir to req.URL.Path...
-			
+			http.Redirect(rsp, req, req.URL.Path, 303)
+			return
+
 		default:
-			go_http.Error(rsp, "Unsupported method", go_http.StatusMethodNotAllowed)
+			http.Error(rsp, "Unsupported method", http.StatusMethodNotAllowed)
 			return
 		}
 
 		return
 	}
 
-	// FIX ME...CRUMBS
-
-	return http.HandlerFunc(fn)
+	password_handler := http.HandlerFunc(fn)
+	return crumb.EnsureCrumbHandler(opts.CrumbConfig, password_handler)
 }
-

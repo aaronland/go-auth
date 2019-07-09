@@ -1,4 +1,4 @@
-package api
+package credentials
 
 import (
 	"errors"
@@ -13,21 +13,21 @@ import (
 	go_http "net/http"
 )
 
-type OAuth2Authenticator struct {
-	auth.HTTPAuthenticator
+type OAuth2Credentials struct {
+	auth.Credentials
 	account_db database.AccountDatabase
 }
 
-func NewOAuth2Authenticator(db database.AccountDatabase) (auth.HTTPAuthenticator, error) {
+func NewOAuth2Credentials(db database.AccountDatabase) (auth.Credentials, error) {
 
-	o_auth := OAuth2Authenticator{
+	o_auth := OAuth2Credentials{
 		account_db: db,
 	}
 
 	return &o_auth, nil
 }
 
-func (o_auth *OAuth2Authenticator) AppendCredentialsHandler(prev go_http.Handler) go_http.Handler {
+func (o_auth *OAuth2Credentials) AppendCredentialsHandler(prev go_http.Handler) go_http.Handler {
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
@@ -52,7 +52,7 @@ func (o_auth *OAuth2Authenticator) AppendCredentialsHandler(prev go_http.Handler
 	return go_http.HandlerFunc(fn)
 }
 
-func (o_auth *OAuth2Authenticator) AuthHandler(next go_http.Handler) go_http.Handler {
+func (o_auth *OAuth2Credentials) AuthHandler(next go_http.Handler) go_http.Handler {
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
@@ -75,19 +75,19 @@ func (o_auth *OAuth2Authenticator) AuthHandler(next go_http.Handler) go_http.Han
 	return go_http.HandlerFunc(fn)
 }
 
-func (o_auth *OAuth2Authenticator) SigninHandler(*template.Template, string, go_http.Handler) go_http.Handler {
+func (o_auth *OAuth2Credentials) SigninHandler(*template.Template, string, go_http.Handler) go_http.Handler {
 	return auth.NotImplementedHandler()
 }
 
-func (o_auth *OAuth2Authenticator) SignupHandler(*template.Template, string, go_http.Handler) go_http.Handler {
+func (o_auth *OAuth2Credentials) SignupHandler(*template.Template, string, go_http.Handler) go_http.Handler {
 	return auth.NotImplementedHandler()
 }
 
-func (o_auth *OAuth2Authenticator) SignoutHandler(*template.Template, string, go_http.Handler) go_http.Handler {
+func (o_auth *OAuth2Credentials) SignoutHandler(*template.Template, string, go_http.Handler) go_http.Handler {
 	return auth.NotImplementedHandler()
 }
 
-func (o_auth *OAuth2Authenticator) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
+func (o_auth *OAuth2Credentials) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
 
 	token := req.FormValue("access_token")
 
@@ -98,6 +98,10 @@ func (o_auth *OAuth2Authenticator) GetAccountForRequest(req *go_http.Request) (*
 	}
 
 	return nil, errors.New("Please write me")
+}
+
+func (o_auth *OAuth2Credentials) SetAccountForReponse(go_http.ResponseWriter, *account.Account) error {
+	return errors.New("Not implemented")
 }
 
 func NewAccessTokenRewriteFunc(acct *account.Account) rewrite.RewriteHTMLFunc {
