@@ -1,13 +1,19 @@
 package www
 
 import (
-       "encoding/json"
+	"context"
+	"encoding/json"
+	"errors"
 	"github.com/aaronland/go-http-auth"
+	"github.com/aaronland/go-http-auth/account"
 	"github.com/aaronland/go-http-auth/database"
+	"github.com/aaronland/go-http-auth/token"
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
 	_ "log"
 	"net/http"
+	"sort"
+	"sync"
 )
 
 type SiteTokenHandlerOptions struct {
@@ -17,9 +23,85 @@ type SiteTokenHandlerOptions struct {
 }
 
 type SiteTokenReponse struct {
-     AccessToken string
-     Expires int64
-     Permissions int
+	AccessToken string
+	Expires     int64
+	Permissions int
+}
+
+func GetSiteTokenForAccount(ctx context.Context, token_db database.AccessTokenDatabase, acct *account.Account) (*token.Token, error) {
+
+	possible := make([]*token.Token, 0)
+	mu := new(sync.RWMutex)
+
+	cb := func(t *token.Token) error {
+
+		if !t.IsSiteToken() {
+			return nil
+		}
+
+		if !t.IsActive() {
+			return nil
+		}
+
+		mu.Lock()
+		defer mu.Unlock()
+
+		possible = append(possible, t)
+		return nil
+	}
+
+	err := token_db.ListAccessTokensForAccount(ctx, acct, cb)
+
+	if err != nil {
+		return nil, err
+	}
+
+	count_possible := len(possible)
+
+	switch count_possible {
+
+	case 0:
+
+		t, err := token.NewSiteTokenForAccount(acct)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return token_db.AddToken(t)
+
+	case 1:
+		return possible[0], nil
+
+	default:
+
+		sorted := make([]int64, count_possible)
+		lookup := make(map[int64]*token.Token)
+
+		for i, t := range possible {
+			sorted[i] = t.ID
+			lookup[t.ID] = t
+		}
+
+		sort.Slice(sorted, func(i, j int) bool {
+			return sorted[i] > sorted[j] // most recent first
+		})
+
+		current := sorted[0]
+		token := lookup[current]
+
+		go func() {
+			for _, id := range sorted[1:] {
+
+				t := lookup[id]
+				token_db.DeleteToken(t)
+			}
+		}()
+
+		return token, nil
+	}
+
+	return nil, errors.New("How did we get here")
 }
 
 func SiteTokenHandler(opts *SiteTokenHandlerOptions) http.Handler {
@@ -113,7 +195,7 @@ func SiteTokenHandler(opts *SiteTokenHandlerOptions) http.Handler {
 				return
 			}
 
-			site_token, err := opts.AccessTokenDatabase.GetSiteTokenForAccount(acct)
+			site_token, err := GetSiteTokenForAccount(req.Context(), opts.AccessTokenDatabase, acct)
 
 			if err != nil {
 				http.Error(rsp, err.Error(), http.StatusInternalServerError)
@@ -122,7 +204,7 @@ func SiteTokenHandler(opts *SiteTokenHandlerOptions) http.Handler {
 
 			token_rsp := SiteTokenReponse{
 				AccessToken: site_token.AccessToken,
-				Expires: site_token.Expires,
+				Expires:     site_token.Expires,
 				Permissions: site_token.Permissions,
 			}
 
@@ -133,7 +215,7 @@ func SiteTokenHandler(opts *SiteTokenHandlerOptions) http.Handler {
 				return
 			}
 
-			rsp.Write(enc)			
+			rsp.Write(enc)
 			return
 
 		default:

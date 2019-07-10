@@ -1,8 +1,10 @@
 package fs
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/aaronland/go-http-auth/account"
 	"github.com/aaronland/go-http-auth/database"
 	"github.com/aaronland/go-http-auth/token"
 	"io/ioutil"
@@ -13,8 +15,8 @@ import (
 	"time"
 )
 
-const FSDATABASE_TOKENS_POINTERS string = "pointers"
 const FSDATABASE_TOKENS string = "tokens"
+const FSDATABASE_TOKENS_POINTERS string = "tokens_pointers"
 
 type FSAccessTokenDatabase struct {
 	database.AccessTokenDatabase
@@ -167,7 +169,39 @@ func (db *FSAccessTokenDatabase) GetTokenByID(tkn_id int64) (*token.Token, error
 }
 
 func (db *FSAccessTokenDatabase) GetTokenByAccessToken(access_token string) (*token.Token, error) {
-	return db.getTokenByPointer("accrss_token", access_token)
+	return db.getTokenByPointer("access_token", access_token)
+}
+
+func (db *FSAccessTokenDatabase) ListAccessTokens(ctx context.Context, cb database.ListAccessTokensFunc) error {
+
+	tokens_root := filepath.Join(db.root, FSDATABASE_TOKENS)
+
+	local_cb := func(ctx context.Context, path string) error {
+
+		tkn, err := unmarshalData(path, "token")
+
+		if err != nil {
+			return err
+		}
+
+		return cb(tkn.(*token.Token))
+	}
+
+	return crawlDatabase(ctx, tokens_root, local_cb)
+}
+
+func (db *FSAccessTokenDatabase) ListAccessTokensForAccount(ctx context.Context, acct *account.Account, cb database.ListAccessTokensFunc) error {
+
+	local_cb := func(t *token.Token) error {
+
+		if t.AccountID != acct.ID {
+			return nil
+		}
+
+		return cb(t)
+	}
+
+	return db.ListAccessTokens(ctx, local_cb)
 }
 
 func (db *FSAccessTokenDatabase) getTokenByPointer(pointer_key string, pointer_id string) (*token.Token, error) {

@@ -184,7 +184,7 @@ func NewSiteTokenForAccount(acct *account.Account) (*Token, error) {
 		return nil, err
 	}
 
-	t.Permissions = TOKEN_PERMISSIONS_WRITE	// delete?
+	t.Permissions = TOKEN_PERMISSIONS_WRITE // delete?
 	t.AccountID = acct.ID
 
 	return t, nil
