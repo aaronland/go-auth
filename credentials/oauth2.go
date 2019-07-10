@@ -2,9 +2,9 @@ package credentials
 
 import (
 	"errors"
-	"github.com/aaronland/go-http-auth"
-	"github.com/aaronland/go-http-auth/account"
-	"github.com/aaronland/go-http-auth/database"
+	"github.com/aaronland/go-auth"
+	"github.com/aaronland/go-auth/account"
+	"github.com/aaronland/go-auth/database"
 	"github.com/aaronland/go-http-rewrite"
 	"golang.org/x/net/html"
 	"html/template"

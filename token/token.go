@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/aaronland/go-http-auth/account"
+	"github.com/aaronland/go-auth/account"
 	"github.com/aaronland/go-string/random"
 	"time"
 )

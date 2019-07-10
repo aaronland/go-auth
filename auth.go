@@ -2,7 +2,7 @@ package auth
 
 import (
 	"context"
-	"github.com/aaronland/go-http-auth/account"
+	"github.com/aaronland/go-auth/account"
 	"html/template"
 	go_http "net/http"
 )

@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/aaronland/go-http-auth"
-	"github.com/aaronland/go-http-auth/account"
-	"github.com/aaronland/go-http-auth/credentials"
-	"github.com/aaronland/go-http-auth/database/fs"
-	"github.com/aaronland/go-http-auth/www"
+	"github.com/aaronland/go-auth"
+	"github.com/aaronland/go-auth/account"
+	"github.com/aaronland/go-auth/credentials"
+	"github.com/aaronland/go-auth/database/fs"
+	"github.com/aaronland/go-auth/www"
 	"github.com/aaronland/go-string/dsn"
 	"html/template"
 	"log"
@@ -235,7 +235,6 @@ func main() {
 
 		token_handler := www.SiteTokenHandler(token_opts)
 		mux.Handle("/token", token_handler)
-
 	}
 
 	endpoint := fmt.Sprintf("%s:%d", *host, *port)

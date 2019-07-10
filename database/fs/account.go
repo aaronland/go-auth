@@ -3,8 +3,8 @@ package fs
 import (
 	"errors"
 	"fmt"
-	"github.com/aaronland/go-http-auth/account"
-	"github.com/aaronland/go-http-auth/database"
+	"github.com/aaronland/go-auth/account"
+	"github.com/aaronland/go-auth/database"
 	"io/ioutil"
 	"os"
 	"path/filepath"

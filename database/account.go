@@ -1,7 +1,7 @@
 package database
 
 import (
-	"github.com/aaronland/go-http-auth/account"
+	"github.com/aaronland/go-auth/account"
 )
 
 type ErrNoAccount struct {

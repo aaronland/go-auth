@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/aaronland/go-http-auth/database/fs"
+	"github.com/aaronland/go-auth/database/fs"
 	"github.com/aaronland/go-string/dsn"
 	"log"
 )

@@ -2,9 +2,9 @@ package www
 
 import (
 	"errors"
-	"github.com/aaronland/go-http-auth"
-	"github.com/aaronland/go-http-auth/account"
-	"github.com/aaronland/go-http-auth/database"
+	"github.com/aaronland/go-auth"
+	"github.com/aaronland/go-auth/account"
+	"github.com/aaronland/go-auth/database"
 	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-sanitize"
 	"html/template"

@@ -2,8 +2,8 @@ package database
 
 import (
 	"context"
-	"github.com/aaronland/go-http-auth/account"
-	"github.com/aaronland/go-http-auth/token"
+	"github.com/aaronland/go-auth/account"
+	"github.com/aaronland/go-auth/token"
 )
 
 type ListAccessTokensFunc func(*token.Token) error
