@@ -17,7 +17,7 @@ import (
 )
 
 type SiteTokenHandlerOptions struct {
-	Credentials         auth.Credentials
+	Credentials          auth.Credentials
 	AccountsDatabase     database.AccountsDatabase
 	AccessTokensDatabase database.AccessTokensDatabase
 }

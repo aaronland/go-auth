@@ -12,11 +12,3 @@ type AccountsDatabase interface {
 	UpdateAccount(*account.Account) (*account.Account, error)
 	RemoveAccount(*account.Account) (*account.Account, error)
 }
-
-type ErrNoAccount struct {
-	error
-}
-
-func (e *ErrNoAccount) String() string {
-	return "Account does not exist"
-}

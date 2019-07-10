@@ -194,9 +194,9 @@ func main() {
 	index_handler = basic_auth_handler(index_handler)
 
 	pswd_handler_opts := &www.PasswordHandlerOptions{
-		Credentials:     ep_creds,
+		Credentials:      ep_creds,
 		AccountsDatabase: account_db,
-		CrumbConfig:     crumb_cfg,
+		CrumbConfig:      crumb_cfg,
 	}
 
 	pswd_handler := www.PasswordHandler(pswd_handler_opts, auth_templates, "password")
@@ -228,7 +228,7 @@ func main() {
 		}
 
 		token_opts := &www.SiteTokenHandlerOptions{
-			Credentials:         ep_creds,
+			Credentials:          ep_creds,
 			AccountsDatabase:     account_db,
 			AccessTokensDatabase: token_db,
 		}

@@ -13,9 +13,9 @@ import (
 )
 
 type PasswordHandlerOptions struct {
-	Credentials     auth.Credentials
+	Credentials      auth.Credentials
 	AccountsDatabase database.AccountsDatabase
-	CrumbConfig     *crumb.CrumbConfig
+	CrumbConfig      *crumb.CrumbConfig
 }
 
 func PasswordHandler(opts *PasswordHandlerOptions, templates *template.Template, t_name string) http.Handler {
