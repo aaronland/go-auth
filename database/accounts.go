@@ -20,15 +20,3 @@ type ErrNoAccount struct {
 func (e *ErrNoAccount) String() string {
 	return "Account does not exist"
 }
-
-func IsNotExist(e error) bool {
-
-	switch e.(type) {
-	case *ErrNoAccount:
-		return true
-	case ErrNoAccount:
-		return true
-	default:
-		return false
-	}
-}

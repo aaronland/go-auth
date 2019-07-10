@@ -17,3 +17,11 @@ type AccessTokensDatabase interface {
 	ListAccessTokens(context.Context, ListAccessTokensFunc) error
 	ListAccessTokensForAccount(context.Context, *account.Account, ListAccessTokensFunc) error
 }
+
+type ErrNoToken struct {
+	error
+}
+
+func (e *ErrNoToken) String() string {
+	return "Token does not exist"
+}

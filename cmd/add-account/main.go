@@ -28,7 +28,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	account_db, err := fs.NewFSAccountDatabase(accts_cfg["root"])
+	account_db, err := fs.NewFSAccountsDatabase(accts_cfg["root"])
 
 	if err != nil {
 		log.Fatal(err)
