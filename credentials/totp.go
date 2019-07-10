@@ -39,11 +39,11 @@ func DefaultTOTPCredentialsOptions() *TOTPCredentialsOptions {
 
 type TOTPCredentials struct {
 	auth.Credentials
-	account_db database.AccountDatabase
+	account_db database.AccountsDatabase
 	options    *TOTPCredentialsOptions
 }
 
-func NewTOTPCredentials(db database.AccountDatabase, opts *TOTPCredentialsOptions) (auth.Credentials, error) {
+func NewTOTPCredentials(db database.AccountsDatabase, opts *TOTPCredentialsOptions) (auth.Credentials, error) {
 
 	totp_auth := TOTPCredentials{
 		account_db: db,

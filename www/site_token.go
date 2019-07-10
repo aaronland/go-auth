@@ -16,12 +16,10 @@ import (
 	"sync"
 )
 
-const CONTEXT_SITE_TOKEN string = "site_token"
-
 type SiteTokenHandlerOptions struct {
 	Credentials         auth.Credentials
-	AccountDatabase     database.AccountDatabase
-	AccessTokenDatabase database.AccessTokenDatabase
+	AccountsDatabase     database.AccountsDatabase
+	AccessTokensDatabase database.AccessTokensDatabase
 }
 
 type SiteTokenReponse struct {
@@ -30,23 +28,7 @@ type SiteTokenReponse struct {
 	Permissions int
 }
 
-/*
-func GetSiteTokenForAccountWithRequest(req *http.Request, token_db database.AccessTokenDatabase, acct *account.Account) (*token.Token, error) {
-
-	ctx := req.Context()
-
-     	v := ctx.Value(CONTEXT_SITE_TOKEN)
-
-	if v != nil {
-		site_token := v.(*token.Token)
-		return site_token, nil
-	}
-
-	return GetSiteTokenForAccount(ctx, token_db, acct)
-}
-*/
-
-func GetSiteTokenForAccount(ctx context.Context, token_db database.AccessTokenDatabase, acct *account.Account) (*token.Token, error) {
+func GetSiteTokenForAccount(ctx context.Context, token_db database.AccessTokensDatabase, acct *account.Account) (*token.Token, error) {
 
 	possible := make([]*token.Token, 0)
 	mu := new(sync.RWMutex)
@@ -121,7 +103,7 @@ func GetSiteTokenForAccount(ctx context.Context, token_db database.AccessTokenDa
 			for _, id := range sorted[1:] {
 
 				t := lookup[id]
-				_, err := token_db.DeleteToken(t)
+				_, err := token_db.RemoveToken(t)
 
 				if err != nil {
 					log.Printf("Failed to delete token (%d) %s\n", t.ID, err)
@@ -183,7 +165,7 @@ func SiteTokenHandler(opts *SiteTokenHandlerOptions) http.Handler {
 				return
 			}
 
-			acct, err := opts.AccountDatabase.GetAccountByEmailAddress(email)
+			acct, err := opts.AccountsDatabase.GetAccountByEmailAddress(email)
 
 			if err != nil {
 				http.Error(rsp, "Forbidden", http.StatusForbidden)
@@ -230,7 +212,9 @@ func SiteTokenHandler(opts *SiteTokenHandlerOptions) http.Handler {
 				return
 			}
 
-			site_token, err := GetSiteTokenForAccount(req.Context(), opts.AccessTokenDatabase, acct)
+			token_db := opts.AccessTokensDatabase
+
+			site_token, err := GetSiteTokenForAccount(req.Context(), token_db, acct)
 
 			if err != nil {
 				http.Error(rsp, err.Error(), http.StatusInternalServerError)

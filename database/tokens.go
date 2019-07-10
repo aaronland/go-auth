@@ -8,12 +8,12 @@ import (
 
 type ListAccessTokensFunc func(*token.Token) error
 
-type AccessTokenDatabase interface {
+type AccessTokensDatabase interface {
 	GetTokenByID(int64) (*token.Token, error)
 	GetTokenByAccessToken(string) (*token.Token, error)
 	AddToken(*token.Token) (*token.Token, error)
 	UpdateToken(*token.Token) (*token.Token, error)
-	DeleteToken(*token.Token) (*token.Token, error)
+	RemoveToken(*token.Token) (*token.Token, error)
 	ListAccessTokens(context.Context, ListAccessTokensFunc) error
 	ListAccessTokensForAccount(context.Context, *account.Account, ListAccessTokensFunc) error
 }

@@ -13,16 +13,16 @@ import (
 	"time"
 )
 
-const FSDATABASE_POINTERS string = "pointers"
 const FSDATABASE_ACCOUNTS string = "accounts"
+const FSDATABASE_ACCOUNTS_POINTERS string = "accounts_pointers"
 
-type FSAccountDatabase struct {
-	database.AccountDatabase
+type FSAccountsDatabase struct {
+	database.AccountsDatabase
 	root string
 	mu   *sync.RWMutex
 }
 
-func NewFSAccountDatabase(root string) (database.AccountDatabase, error) {
+func NewFSAccountsDatabase(root string) (database.AccountsDatabase, error) {
 
 	abs_root, err := ensureRoot(root)
 
@@ -31,7 +31,7 @@ func NewFSAccountDatabase(root string) (database.AccountDatabase, error) {
 	}
 
 	subdirs := []string{
-		FSDATABASE_POINTERS,
+		FSDATABASE_ACCOUNTS_POINTERS,
 		FSDATABASE_ACCOUNTS,
 	}
 
@@ -53,7 +53,7 @@ func NewFSAccountDatabase(root string) (database.AccountDatabase, error) {
 
 	mu := new(sync.RWMutex)
 
-	db := &FSAccountDatabase{
+	db := &FSAccountsDatabase{
 		root: abs_root,
 		mu:   mu,
 	}
@@ -61,7 +61,7 @@ func NewFSAccountDatabase(root string) (database.AccountDatabase, error) {
 	return db, nil
 }
 
-func (db *FSAccountDatabase) pointersMap(acct *account.Account) map[string]string {
+func (db *FSAccountsDatabase) pointersMap(acct *account.Account) map[string]string {
 
 	pointers_map := map[string]string{
 		"address": acct.Address.URI,
@@ -71,7 +71,7 @@ func (db *FSAccountDatabase) pointersMap(acct *account.Account) map[string]strin
 	return pointers_map
 }
 
-func (db *FSAccountDatabase) AddAccount(acct *account.Account) (*account.Account, error) {
+func (db *FSAccountsDatabase) AddAccount(acct *account.Account) (*account.Account, error) {
 
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -112,7 +112,7 @@ func (db *FSAccountDatabase) AddAccount(acct *account.Account) (*account.Account
 	return acct, nil
 }
 
-func (db *FSAccountDatabase) UpdateAccount(acct *account.Account) (*account.Account, error) {
+func (db *FSAccountsDatabase) UpdateAccount(acct *account.Account) (*account.Account, error) {
 
 	now := time.Now()
 	acct.LastModified = now.Unix()
@@ -135,7 +135,7 @@ func (db *FSAccountDatabase) UpdateAccount(acct *account.Account) (*account.Acco
 	return acct, nil
 }
 
-func (db *FSAccountDatabase) DeleteAccount(acct *account.Account) (*account.Account, error) {
+func (db *FSAccountsDatabase) RemoveAccount(acct *account.Account) (*account.Account, error) {
 
 	acct.Status = account.ACCOUNT_STATUS_DELETED
 	acct, err := db.UpdateAccount(acct)
@@ -154,7 +154,7 @@ func (db *FSAccountDatabase) DeleteAccount(acct *account.Account) (*account.Acco
 	return acct, nil
 }
 
-func (db *FSAccountDatabase) GetAccountByID(acct_id int64) (*account.Account, error) {
+func (db *FSAccountsDatabase) GetAccountByID(acct_id int64) (*account.Account, error) {
 
 	acct_path := db.accountPath(acct_id)
 
@@ -167,15 +167,15 @@ func (db *FSAccountDatabase) GetAccountByID(acct_id int64) (*account.Account, er
 	return acct.(*account.Account), nil
 }
 
-func (db *FSAccountDatabase) GetAccountByEmailAddress(addr string) (*account.Account, error) {
+func (db *FSAccountsDatabase) GetAccountByEmailAddress(addr string) (*account.Account, error) {
 	return db.getAccountByPointer("address", addr)
 }
 
-func (db *FSAccountDatabase) GetAccountByURL(addr string) (*account.Account, error) {
+func (db *FSAccountsDatabase) GetAccountByURL(addr string) (*account.Account, error) {
 	return db.getAccountByPointer("url", addr)
 }
 
-func (db *FSAccountDatabase) getAccountByPointer(pointer_key string, pointer_id string) (*account.Account, error) {
+func (db *FSAccountsDatabase) getAccountByPointer(pointer_key string, pointer_id string) (*account.Account, error) {
 
 	acct_id, err := db.getPointer(pointer_key, pointer_id)
 
@@ -186,7 +186,7 @@ func (db *FSAccountDatabase) getAccountByPointer(pointer_key string, pointer_id 
 	return db.GetAccountByID(acct_id)
 }
 
-func (db *FSAccountDatabase) getPointer(pointer_key string, pointer_id string) (int64, error) {
+func (db *FSAccountsDatabase) getPointer(pointer_key string, pointer_id string) (int64, error) {
 
 	pointer_path := db.pointerPath(pointer_key, pointer_id)
 
@@ -206,7 +206,7 @@ func (db *FSAccountDatabase) getPointer(pointer_key string, pointer_id string) (
 	return strconv.ParseInt(str_id, 10, 64)
 }
 
-func (db *FSAccountDatabase) setPointers(acct_id int64, pointers map[string]string) error {
+func (db *FSAccountsDatabase) setPointers(acct_id int64, pointers map[string]string) error {
 
 	for pointer_key, pointer_id := range pointers {
 
@@ -220,7 +220,7 @@ func (db *FSAccountDatabase) setPointers(acct_id int64, pointers map[string]stri
 	return nil
 }
 
-func (db *FSAccountDatabase) setPointer(acct_id int64, pointer_key string, pointer_id string) error {
+func (db *FSAccountsDatabase) setPointer(acct_id int64, pointer_key string, pointer_id string) error {
 
 	pointer_path := db.pointerPath(pointer_key, pointer_id)
 
@@ -247,7 +247,7 @@ func (db *FSAccountDatabase) setPointer(acct_id int64, pointer_key string, point
 	return fh.Close()
 }
 
-func (db *FSAccountDatabase) pointerExists(key string, id string) bool {
+func (db *FSAccountsDatabase) pointerExists(key string, id string) bool {
 
 	pointer_path := db.pointerPath(key, id)
 
@@ -260,15 +260,15 @@ func (db *FSAccountDatabase) pointerExists(key string, id string) bool {
 	return true
 }
 
-func (db *FSAccountDatabase) pointerPath(key string, id string) string {
+func (db *FSAccountsDatabase) pointerPath(key string, id string) string {
 
-	pointers_root := filepath.Join(db.root, FSDATABASE_POINTERS)
+	pointers_root := filepath.Join(db.root, FSDATABASE_ACCOUNTS_POINTERS)
 	key_root := filepath.Join(pointers_root, key)
 
 	return filepath.Join(key_root, id)
 }
 
-func (db *FSAccountDatabase) accountPath(id int64) string {
+func (db *FSAccountsDatabase) accountPath(id int64) string {
 
 	str_id := strconv.FormatInt(id, 10)
 	fname := fmt.Sprintf("%s.json", str_id)

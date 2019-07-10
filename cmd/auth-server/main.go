@@ -85,7 +85,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	account_db, err := fs.NewFSAccountDatabase(accts_cfg["root"])
+	account_db, err := fs.NewFSAccountsDatabase(accts_cfg["root"])
 
 	if err != nil {
 		log.Fatal(err)
@@ -195,7 +195,7 @@ func main() {
 
 	pswd_handler_opts := &www.PasswordHandlerOptions{
 		Credentials:     ep_creds,
-		AccountDatabase: account_db,
+		AccountsDatabase: account_db,
 		CrumbConfig:     crumb_cfg,
 	}
 
@@ -221,7 +221,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		token_db, err := fs.NewFSAccessTokenDatabase(token_cfg["root"])
+		token_db, err := fs.NewFSAccessTokensDatabase(token_cfg["root"])
 
 		if err != nil {
 			log.Fatal(err)
@@ -229,8 +229,8 @@ func main() {
 
 		token_opts := &www.SiteTokenHandlerOptions{
 			Credentials:         ep_creds,
-			AccountDatabase:     account_db,
-			AccessTokenDatabase: token_db,
+			AccountsDatabase:     account_db,
+			AccessTokensDatabase: token_db,
 		}
 
 		token_handler := www.SiteTokenHandler(token_opts)

@@ -15,10 +15,10 @@ import (
 
 type OAuth2Credentials struct {
 	auth.Credentials
-	account_db database.AccountDatabase
+	account_db database.AccountsDatabase
 }
 
-func NewOAuth2Credentials(db database.AccountDatabase) (auth.Credentials, error) {
+func NewOAuth2Credentials(db database.AccountsDatabase) (auth.Credentials, error) {
 
 	o_auth := OAuth2Credentials{
 		account_db: db,

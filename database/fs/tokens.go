@@ -18,13 +18,13 @@ import (
 const FSDATABASE_TOKENS string = "tokens"
 const FSDATABASE_TOKENS_POINTERS string = "tokens_pointers"
 
-type FSAccessTokenDatabase struct {
-	database.AccessTokenDatabase
+type FSAccessTokensDatabase struct {
+	database.AccessTokensDatabase
 	root string
 	mu   *sync.RWMutex
 }
 
-func NewFSAccessTokenDatabase(root string) (database.AccessTokenDatabase, error) {
+func NewFSAccessTokensDatabase(root string) (database.AccessTokensDatabase, error) {
 
 	abs_root, err := ensureRoot(root)
 
@@ -55,7 +55,7 @@ func NewFSAccessTokenDatabase(root string) (database.AccessTokenDatabase, error)
 
 	mu := new(sync.RWMutex)
 
-	db := &FSAccessTokenDatabase{
+	db := &FSAccessTokensDatabase{
 		root: abs_root,
 		mu:   mu,
 	}
@@ -63,7 +63,7 @@ func NewFSAccessTokenDatabase(root string) (database.AccessTokenDatabase, error)
 	return db, nil
 }
 
-func (db *FSAccessTokenDatabase) pointersMap(tkn *token.Token) map[string]string {
+func (db *FSAccessTokensDatabase) pointersMap(tkn *token.Token) map[string]string {
 
 	pointers_map := map[string]string{
 		"access_token": tkn.AccessToken,
@@ -72,7 +72,7 @@ func (db *FSAccessTokenDatabase) pointersMap(tkn *token.Token) map[string]string
 	return pointers_map
 }
 
-func (db *FSAccessTokenDatabase) AddToken(tkn *token.Token) (*token.Token, error) {
+func (db *FSAccessTokensDatabase) AddToken(tkn *token.Token) (*token.Token, error) {
 
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -113,7 +113,7 @@ func (db *FSAccessTokenDatabase) AddToken(tkn *token.Token) (*token.Token, error
 	return tkn, nil
 }
 
-func (db *FSAccessTokenDatabase) UpdateToken(tkn *token.Token) (*token.Token, error) {
+func (db *FSAccessTokensDatabase) UpdateToken(tkn *token.Token) (*token.Token, error) {
 
 	now := time.Now()
 	tkn.LastModified = now.Unix()
@@ -136,7 +136,7 @@ func (db *FSAccessTokenDatabase) UpdateToken(tkn *token.Token) (*token.Token, er
 	return tkn, nil
 }
 
-func (db *FSAccessTokenDatabase) DeleteToken(tkn *token.Token) (*token.Token, error) {
+func (db *FSAccessTokensDatabase) RemoveToken(tkn *token.Token) (*token.Token, error) {
 
 	tkn.Status = token.TOKEN_STATUS_DELETED
 	tkn, err := db.UpdateToken(tkn)
@@ -155,7 +155,7 @@ func (db *FSAccessTokenDatabase) DeleteToken(tkn *token.Token) (*token.Token, er
 	return tkn, nil
 }
 
-func (db *FSAccessTokenDatabase) GetTokenByID(tkn_id int64) (*token.Token, error) {
+func (db *FSAccessTokensDatabase) GetTokenByID(tkn_id int64) (*token.Token, error) {
 
 	tkn_path := db.tokenPath(tkn_id)
 
@@ -168,11 +168,11 @@ func (db *FSAccessTokenDatabase) GetTokenByID(tkn_id int64) (*token.Token, error
 	return tkn.(*token.Token), nil
 }
 
-func (db *FSAccessTokenDatabase) GetTokenByAccessToken(access_token string) (*token.Token, error) {
+func (db *FSAccessTokensDatabase) GetTokenByAccessToken(access_token string) (*token.Token, error) {
 	return db.getTokenByPointer("access_token", access_token)
 }
 
-func (db *FSAccessTokenDatabase) ListAccessTokens(ctx context.Context, cb database.ListAccessTokensFunc) error {
+func (db *FSAccessTokensDatabase) ListAccessTokens(ctx context.Context, cb database.ListAccessTokensFunc) error {
 
 	tokens_root := filepath.Join(db.root, FSDATABASE_TOKENS)
 
@@ -190,7 +190,7 @@ func (db *FSAccessTokenDatabase) ListAccessTokens(ctx context.Context, cb databa
 	return crawlDatabase(ctx, tokens_root, local_cb)
 }
 
-func (db *FSAccessTokenDatabase) ListAccessTokensForAccount(ctx context.Context, acct *account.Account, cb database.ListAccessTokensFunc) error {
+func (db *FSAccessTokensDatabase) ListAccessTokensForAccount(ctx context.Context, acct *account.Account, cb database.ListAccessTokensFunc) error {
 
 	local_cb := func(t *token.Token) error {
 
@@ -204,7 +204,7 @@ func (db *FSAccessTokenDatabase) ListAccessTokensForAccount(ctx context.Context,
 	return db.ListAccessTokens(ctx, local_cb)
 }
 
-func (db *FSAccessTokenDatabase) getTokenByPointer(pointer_key string, pointer_id string) (*token.Token, error) {
+func (db *FSAccessTokensDatabase) getTokenByPointer(pointer_key string, pointer_id string) (*token.Token, error) {
 
 	tkn_id, err := db.getPointer(pointer_key, pointer_id)
 
@@ -215,7 +215,7 @@ func (db *FSAccessTokenDatabase) getTokenByPointer(pointer_key string, pointer_i
 	return db.GetTokenByID(tkn_id)
 }
 
-func (db *FSAccessTokenDatabase) getPointer(pointer_key string, pointer_id string) (int64, error) {
+func (db *FSAccessTokensDatabase) getPointer(pointer_key string, pointer_id string) (int64, error) {
 
 	pointer_path := db.pointerPath(pointer_key, pointer_id)
 
@@ -235,7 +235,7 @@ func (db *FSAccessTokenDatabase) getPointer(pointer_key string, pointer_id strin
 	return strconv.ParseInt(str_id, 10, 64)
 }
 
-func (db *FSAccessTokenDatabase) setPointers(tkn_id int64, pointers map[string]string) error {
+func (db *FSAccessTokensDatabase) setPointers(tkn_id int64, pointers map[string]string) error {
 
 	for pointer_key, pointer_id := range pointers {
 
@@ -249,7 +249,7 @@ func (db *FSAccessTokenDatabase) setPointers(tkn_id int64, pointers map[string]s
 	return nil
 }
 
-func (db *FSAccessTokenDatabase) setPointer(tkn_id int64, pointer_key string, pointer_id string) error {
+func (db *FSAccessTokensDatabase) setPointer(tkn_id int64, pointer_key string, pointer_id string) error {
 
 	pointer_path := db.pointerPath(pointer_key, pointer_id)
 
@@ -276,7 +276,7 @@ func (db *FSAccessTokenDatabase) setPointer(tkn_id int64, pointer_key string, po
 	return fh.Close()
 }
 
-func (db *FSAccessTokenDatabase) pointerExists(key string, id string) bool {
+func (db *FSAccessTokensDatabase) pointerExists(key string, id string) bool {
 
 	pointer_path := db.pointerPath(key, id)
 
@@ -289,7 +289,7 @@ func (db *FSAccessTokenDatabase) pointerExists(key string, id string) bool {
 	return true
 }
 
-func (db *FSAccessTokenDatabase) pointerPath(key string, id string) string {
+func (db *FSAccessTokensDatabase) pointerPath(key string, id string) string {
 
 	pointers_root := filepath.Join(db.root, FSDATABASE_TOKENS_POINTERS)
 	key_root := filepath.Join(pointers_root, key)
@@ -297,7 +297,7 @@ func (db *FSAccessTokenDatabase) pointerPath(key string, id string) string {
 	return filepath.Join(key_root, id)
 }
 
-func (db *FSAccessTokenDatabase) tokenPath(id int64) string {
+func (db *FSAccessTokensDatabase) tokenPath(id int64) string {
 
 	str_id := strconv.FormatInt(id, 10)
 	fname := fmt.Sprintf("%s.json", str_id)

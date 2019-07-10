@@ -41,11 +41,11 @@ func DefaultEmailPasswordCredentialsOptions() *EmailPasswordCredentialsOptions {
 
 type EmailPasswordCredentials struct {
 	auth.Credentials
-	account_db database.AccountDatabase
+	account_db database.AccountsDatabase
 	options    *EmailPasswordCredentialsOptions
 }
 
-func NewEmailPasswordCredentials(db database.AccountDatabase, opts *EmailPasswordCredentialsOptions) (auth.Credentials, error) {
+func NewEmailPasswordCredentials(db database.AccountsDatabase, opts *EmailPasswordCredentialsOptions) (auth.Credentials, error) {
 
 	ep_auth := EmailPasswordCredentials{
 		account_db: db,

@@ -14,7 +14,7 @@ import (
 
 type PasswordHandlerOptions struct {
 	Credentials     auth.Credentials
-	AccountDatabase database.AccountDatabase
+	AccountsDatabase database.AccountsDatabase
 	CrumbConfig     *crumb.CrumbConfig
 }
 
@@ -110,7 +110,7 @@ func PasswordHandler(opts *PasswordHandlerOptions, templates *template.Template,
 				return
 			}
 
-			acct, err = opts.AccountDatabase.UpdateAccount(acct)
+			acct, err = opts.AccountsDatabase.UpdateAccount(acct)
 
 			if err != nil {
 				render_error(vars, err)
