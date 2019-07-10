@@ -1,18 +1,25 @@
 package www
 
 import (
+       "encoding/json"
 	"github.com/aaronland/go-http-auth"
 	"github.com/aaronland/go-http-auth/database"
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
-	"log"
+	_ "log"
 	"net/http"
 )
 
 type SiteTokenHandlerOptions struct {
-	Credentials     auth.Credentials
-	AccountDatabase database.AccountDatabase
+	Credentials         auth.Credentials
+	AccountDatabase     database.AccountDatabase
 	AccessTokenDatabase database.AccessTokenDatabase
+}
+
+type SiteTokenReponse struct {
+     AccessToken string
+     Expires int64
+     Permissions int
 }
 
 func SiteTokenHandler(opts *SiteTokenHandlerOptions) http.Handler {
@@ -113,7 +120,21 @@ func SiteTokenHandler(opts *SiteTokenHandlerOptions) http.Handler {
 				return
 			}
 
-			log.Println(site_token)
+			token_rsp := SiteTokenReponse{
+				AccessToken: site_token.AccessToken,
+				Expires: site_token.Expires,
+				Permissions: site_token.Permissions,
+			}
+
+			enc, err := json.Marshal(token_rsp)
+
+			if err != nil {
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			rsp.Write(enc)			
+			return
 
 		default:
 			http.Error(rsp, "Unsupported method", http.StatusMethodNotAllowed)

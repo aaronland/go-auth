@@ -2,8 +2,8 @@ package www
 
 import (
 	"github.com/aaronland/go-http-sanitize"
-	"log"
 	go_http "net/http"
+	"strings"
 )
 
 type QueryRedirectHandlerOptions struct {
@@ -38,14 +38,17 @@ func NewQueryRedirectHandler(opts *QueryRedirectHandlerOptions) go_http.Handler 
 		redir, err := sanitize.RequestString(req, opts.RedirectParameter)
 
 		if err != nil {
-			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
 			return
 		}
 
-		log.Println("REDIRECT", req.URL.Path, redir, err)
-
 		if redir == "" {
 			redir = opts.RootURL
+		}
+
+		if !strings.HasPrefix(redir, "/") {
+			go_http.Error(rsp, "Unsupported redirect", go_http.StatusBadRequest)
+			return
 		}
 
 		go_http.Redirect(rsp, req, redir, 303)
