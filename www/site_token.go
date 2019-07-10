@@ -16,6 +16,8 @@ import (
 	"sync"
 )
 
+const CONTEXT_SITE_TOKEN string = "site_token"
+
 type SiteTokenHandlerOptions struct {
 	Credentials         auth.Credentials
 	AccountDatabase     database.AccountDatabase
@@ -27,6 +29,22 @@ type SiteTokenReponse struct {
 	Expires     int64
 	Permissions int
 }
+
+/*
+func GetSiteTokenForAccountWithRequest(req *http.Request, token_db database.AccessTokenDatabase, acct *account.Account) (*token.Token, error) {
+
+	ctx := req.Context()
+
+     	v := ctx.Value(CONTEXT_SITE_TOKEN)
+
+	if v != nil {
+		site_token := v.(*token.Token)
+		return site_token, nil
+	}
+
+	return GetSiteTokenForAccount(ctx, token_db, acct)
+}
+*/
 
 func GetSiteTokenForAccount(ctx context.Context, token_db database.AccessTokenDatabase, acct *account.Account) (*token.Token, error) {
 
@@ -56,6 +74,8 @@ func GetSiteTokenForAccount(ctx context.Context, token_db database.AccessTokenDa
 		return nil, err
 	}
 
+	var site_token *token.Token
+
 	count_possible := len(possible)
 
 	switch count_possible {
@@ -68,10 +88,16 @@ func GetSiteTokenForAccount(ctx context.Context, token_db database.AccessTokenDa
 			return nil, err
 		}
 
-		return token_db.AddToken(t)
+		t, err = token_db.AddToken(t)
+
+		if err != nil {
+			return nil, err
+		}
+
+		site_token = t
 
 	case 1:
-		return possible[0], nil
+		site_token = possible[0]
 
 	default:
 
@@ -103,10 +129,14 @@ func GetSiteTokenForAccount(ctx context.Context, token_db database.AccessTokenDa
 			}
 		}()
 
-		return token, nil
+		site_token = token
 	}
 
-	return nil, errors.New("How did we get here")
+	if site_token == nil {
+		return nil, errors.New("How did we get here")
+	}
+
+	return site_token, nil
 }
 
 func SiteTokenHandler(opts *SiteTokenHandlerOptions) http.Handler {
