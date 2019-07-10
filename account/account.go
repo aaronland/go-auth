@@ -156,7 +156,7 @@ func NewAccount(email_raw string, password_raw string, username_raw string) (*Ac
 	return acct, nil
 }
 
-func (acct *Account) IsEnabled() bool {
+func (acct *Account) IsActive() bool {
 
 	if acct.Status == ACCOUNT_STATUS_DELETED {
 		return false

@@ -172,7 +172,7 @@ func SiteTokenHandler(opts *SiteTokenHandlerOptions) http.Handler {
 				return
 			}
 
-			if !acct.IsEnabled() {
+			if !acct.IsActive() {
 				http.Error(rsp, "Forbidden", http.StatusForbidden)
 				return
 			}

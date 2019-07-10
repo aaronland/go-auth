@@ -399,7 +399,7 @@ func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Reque
 		return nil, errors.New("Invalid user")
 	}
 
-	if !acct.IsEnabled() {
+	if !acct.IsActive() {
 		return nil, errors.New("User is not active")
 	}
 
