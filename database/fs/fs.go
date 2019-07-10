@@ -6,6 +6,7 @@ import (
 	"errors"
 	_ "fmt"
 	"github.com/aaronland/go-http-auth/account"
+	"github.com/aaronland/go-http-auth/token"
 	"github.com/whosonfirst/walk"
 	"io/ioutil"
 	"os"
@@ -83,7 +84,7 @@ func marshalData(data interface{}, path string) error {
 func unmarshalData(path string, data_type string) (interface{}, error) {
 
 	switch data_type {
-	case "account":
+	case "account", "token":
 		// pass
 	default:
 		return nil, errors.New("Unsupported interface")
@@ -114,6 +115,15 @@ func unmarshalData(path string, data_type string) (interface{}, error) {
 
 		if err == nil {
 			data = acct
+		}
+
+	case "token":
+
+		var tkn *token.Token
+		err = json.Unmarshal(body, &tkn)
+
+		if err == nil {
+			data = tkn
 		}
 
 	default:

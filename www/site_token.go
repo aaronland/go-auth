@@ -10,7 +10,7 @@ import (
 	"github.com/aaronland/go-http-auth/token"
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
-	_ "log"
+	"log"
 	"net/http"
 	"sort"
 	"sync"
@@ -91,10 +91,15 @@ func GetSiteTokenForAccount(ctx context.Context, token_db database.AccessTokenDa
 		token := lookup[current]
 
 		go func() {
+
 			for _, id := range sorted[1:] {
 
 				t := lookup[id]
-				token_db.DeleteToken(t)
+				_, err := token_db.DeleteToken(t)
+
+				if err != nil {
+					log.Printf("Failed to delete token (%d) %s\n", t.ID, err)
+				}
 			}
 		}()
 
@@ -115,83 +120,83 @@ func SiteTokenHandler(opts *SiteTokenHandlerOptions) http.Handler {
 			email, err := sanitize.PostString(req, "email")
 
 			if err != nil {
-				http.Error(rsp, err.Error(), http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusBadRequest)
 				return
 			}
 
 			if email == "" {
-				http.Error(rsp, "Missing email", http.StatusInternalServerError)
+				http.Error(rsp, "Missing email", http.StatusBadRequest)
 				return
 			}
 
 			password, err := sanitize.PostString(req, "password")
 
 			if err != nil {
-				http.Error(rsp, err.Error(), http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusBadRequest)
 				return
 			}
 
 			if password == "" {
-				http.Error(rsp, "Missing password", http.StatusInternalServerError)
+				http.Error(rsp, "Missing password", http.StatusBadRequest)
 				return
 			}
 
 			code, err := sanitize.PostString(req, "code")
 
 			if err != nil {
-				http.Error(rsp, err.Error(), http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusBadRequest)
 				return
 			}
 
 			if code == "" {
-				http.Error(rsp, "Missing code", http.StatusInternalServerError)
+				http.Error(rsp, "Missing code", http.StatusBadRequest)
 				return
 			}
 
 			acct, err := opts.AccountDatabase.GetAccountByEmailAddress(email)
 
 			if err != nil {
-				http.Error(rsp, err.Error(), http.StatusInternalServerError)
+				http.Error(rsp, "Forbidden", http.StatusForbidden)
 				return
 			}
 
 			if !acct.IsEnabled() {
-				http.Error(rsp, err.Error(), http.StatusInternalServerError)
+				http.Error(rsp, "Forbidden", http.StatusForbidden)
 				return
 			}
 
 			pswd, err := acct.GetPassword()
 
 			if err != nil {
-				http.Error(rsp, err.Error(), http.StatusInternalServerError)
+				http.Error(rsp, "Forbidden", http.StatusForbidden)
 				return
 			}
 
 			err = pswd.Compare(password)
 
 			if err != nil {
-				http.Error(rsp, err.Error(), http.StatusInternalServerError)
+				http.Error(rsp, "Forbidden", http.StatusForbidden)
 				return
 			}
 
 			mfa := acct.MFA
 
 			if mfa == nil {
-				http.Error(rsp, "MFA not configured", http.StatusInternalServerError)
+				http.Error(rsp, "Forbidden", http.StatusForbidden)
 				return
 			}
 
 			secret, err := mfa.GetSecret()
 
 			if err != nil {
-				http.Error(rsp, err.Error(), http.StatusInternalServerError)
+				http.Error(rsp, "Forbidden", http.StatusForbidden)
 				return
 			}
 
 			valid := totp.Validate(code, secret)
 
 			if !valid {
-				http.Error(rsp, err.Error(), http.StatusInternalServerError)
+				http.Error(rsp, "Invalid code", http.StatusInternalServerError)
 				return
 			}
 

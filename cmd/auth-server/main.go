@@ -59,6 +59,9 @@ func main() {
 	mfa_signin_url := flag.String("mfa-signin-url", "/mfa", "...")
 	mfa_ttl := flag.Int64("mfa-ttl", 3600, "...")
 
+	allow_tokens := flag.Bool("tokens", false, "...")
+	tokens_dsn := flag.String("tokens-dsn", "", "...")
+
 	// please update to use this
 	// https://gocloud.dev/howto/secrets
 
@@ -109,7 +112,7 @@ func main() {
 	ep_opts.CookieSalt = auth_cookie_cfg["salt"]
 	ep_opts.CrumbConfig = crumb_cfg
 
-	ep_auth, err := credentials.NewEmailPasswordCredentials(account_db, ep_opts)
+	ep_creds, err := credentials.NewEmailPasswordCredentials(account_db, ep_opts)
 
 	if err != nil {
 		log.Fatal(err)
@@ -121,7 +124,7 @@ func main() {
 	// but there you go... because MFA is optional (20190710/thisisaaronland)
 
 	ep_auth_handler := func(final_handler http.Handler) http.Handler {
-		auth_handler := ep_auth.AuthHandler(final_handler)
+		auth_handler := ep_creds.AuthHandler(final_handler)
 		return auth_handler
 	}
 
@@ -183,15 +186,15 @@ func main() {
 		// mux.Handle(*mfa_signup_url, mfa_signup_handler)
 	}
 
-	signin_handler := ep_auth.SigninHandler(auth_templates, "signin", signin_complete_handler)
-	signup_handler := ep_auth.SignupHandler(auth_templates, "signup", query_redirect_handler)
-	signout_handler := ep_auth.SignoutHandler(auth_templates, "signout", query_redirect_handler)
+	signin_handler := ep_creds.SigninHandler(auth_templates, "signin", signin_complete_handler)
+	signup_handler := ep_creds.SignupHandler(auth_templates, "signup", query_redirect_handler)
+	signout_handler := ep_creds.SignoutHandler(auth_templates, "signout", query_redirect_handler)
 
-	index_handler := IndexHandler(ep_auth, auth_templates, "index")
+	index_handler := IndexHandler(ep_creds, auth_templates, "index")
 	index_handler = basic_auth_handler(index_handler)
 
 	pswd_handler_opts := &www.PasswordHandlerOptions{
-		Credentials:     ep_auth,
+		Credentials:     ep_creds,
 		AccountDatabase: account_db,
 		CrumbConfig:     crumb_cfg,
 	}
@@ -205,6 +208,35 @@ func main() {
 
 	mux.Handle(ep_opts.RootURL, index_handler)
 	mux.Handle("/password", pswd_handler)
+
+	if *allow_tokens {
+
+		if !*require_mfa {
+			log.Fatal("Site tokens require the use of MFA tokens")
+		}
+
+		token_cfg, err := dsn.StringToDSNWithKeys(*tokens_dsn, "root")
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		token_db, err := fs.NewFSAccessTokenDatabase(token_cfg["root"])
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		token_opts := &www.SiteTokenHandlerOptions{
+			Credentials:         ep_creds,
+			AccountDatabase:     account_db,
+			AccessTokenDatabase: token_db,
+		}
+
+		token_handler := www.SiteTokenHandler(token_opts)
+		mux.Handle("/token", token_handler)
+
+	}
 
 	endpoint := fmt.Sprintf("%s:%d", *host, *port)
 	log.Printf("Listening for requests on %s\n", endpoint)
