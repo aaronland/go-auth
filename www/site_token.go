@@ -23,9 +23,9 @@ type SiteTokenHandlerOptions struct {
 }
 
 type SiteTokenReponse struct {
-	AccessToken string
-	Expires     int64
-	Permissions int
+	AccessToken string `json:"access_token"`
+	Expires     int64  `json:"expires"`
+	Permissions int    `json:"permissions"`
 }
 
 func GetSiteTokenForAccount(ctx context.Context, token_db database.AccessTokensDatabase, acct *account.Account) (*token.Token, error) {
