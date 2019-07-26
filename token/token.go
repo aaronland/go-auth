@@ -84,7 +84,30 @@ func (t *Token) HasPermissions(permissions int) (bool, error) {
 
 func (t *Token) IsActive() bool {
 
-	return t.hasStatus(TOKEN_STATUS_ENABLED)
+	if !t.hasStatus(TOKEN_STATUS_ENABLED) {
+		return false
+	}
+
+	if t.IsExpired() {
+		return false
+	}
+
+	return true
+}
+
+func (t *Token) IsExpired() bool {
+
+	if t.Expires == 0 {
+		return false
+	}
+
+	now := time.Now()
+
+	if now.Unix() < t.Expires {
+		return false
+	}
+
+	return true
 }
 
 func (t *Token) IsSiteToken() bool {

@@ -118,6 +118,29 @@ func GetSiteTokenForAccount(ctx context.Context, token_db database.AccessTokensD
 		return nil, errors.New("How did we get here")
 	}
 
+	if !site_token.IsActive() {
+
+		_, err := token_db.RemoveToken(site_token)
+
+		if err != nil {
+			log.Printf("Failed to delete token (%d) %s\n", site_token.ID, err)
+		}
+
+		t, err := token.NewSiteTokenForAccount(acct)
+
+		if err != nil {
+			return nil, err
+		}
+
+		t, err = token_db.AddToken(t)
+
+		if err != nil {
+			return nil, err
+		}
+
+		site_token = t
+	}
+
 	return site_token, nil
 }
 
