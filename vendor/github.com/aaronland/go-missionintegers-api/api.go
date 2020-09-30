@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/aaronland/go-artisanal-integers"
 	"io/ioutil"
@@ -9,6 +10,12 @@ import (
 	"net/url"
 	"strconv"
 )
+
+func init() {
+	ctx := context.Background()
+	cl := NewAPIClient()
+	artisanalinteger.RegisterClient(ctx, "missionintegers", cl)
+}
 
 type MissionIntegersClient interface {
 	ExecuteMethod(string, *url.Values) (*APIResponse, error)

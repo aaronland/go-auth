@@ -1,6 +1,8 @@
 package crumb
 
 import (
+	"context"
+	"errors"
 	"github.com/aaronland/go-http-rewrite"
 	"github.com/aaronland/go-http-sanitize"
 	"golang.org/x/net/html"
@@ -10,52 +12,128 @@ import (
 	go_http "net/http"
 )
 
-func EnsureCrumbHandler(cfg *CrumbConfig, other go_http.Handler) go_http.Handler {
+// START OF all of this will be replaced by common code in aaronland/go-http-error
+
+func SetErrorContextWithRequest(req *go_http.Request, err error, status_code int) *go_http.Request {
+
+	ctx := req.Context()
+	ctx = SetErrorContextWithContext(ctx, err, status_code)
+	return req.WithContext(ctx)
+}
+
+func SetErrorContextWithContext(ctx context.Context, err error, status_code int) context.Context {
+
+	ctx = context.WithValue(ctx, "Status", status_code)
+	ctx = context.WithValue(ctx, "Error", err)
+	return ctx
+}
+
+func GetErrorContextValuesWithContext(ctx context.Context) (error, int, error) {
+
+	crumb_err := ctx.Value("Error")
+
+	if crumb_err == nil {
+		return nil, 0, errors.New("Invalid crumb handler")
+	}
+
+	status_code := ctx.Value("Status")
+
+	if status_code == nil {
+		return nil, 0, errors.New("Invalid crumb handler")
+	}
+
+	return crumb_err.(error), status_code.(int), nil
+}
+
+func GetErrorContextValuesWithRequest(req *go_http.Request) (error, int, error) {
+	return GetErrorContextValuesWithContext(req.Context())
+}
+
+func DefaultErrorHandler() go_http.Handler {
+
+	handler_fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
+
+		crumb_err, status_code, err := GetErrorContextValuesWithRequest(req)
+
+		if err != nil {
+			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+		}
+
+		go_http.Error(rsp, crumb_err.Error(), status_code)
+		return
+	}
+
+	return go_http.HandlerFunc(handler_fn)
+}
+
+// END OF all of this will be replaced by common code in aaronland/go-http-error
+
+func EnsureCrumbHandler(cr Crumb, next_handler go_http.Handler) go_http.Handler {
+
+	err_handler := DefaultErrorHandler()
+	return EnsureCrumbHandlerWithErrorHandler(cr, next_handler, err_handler)
+}
+
+func EnsureCrumbHandlerWithErrorHandler(cr Crumb, next_handler go_http.Handler, error_handler go_http.Handler) go_http.Handler {
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
 		switch req.Method {
 
-		case "GET":
+		case "POST", "PUT":
 
-			crumb_var, err := GenerateCrumb(cfg, req)
+			var crumb_var string
+			var crumb_err error
 
-			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			if req.Method == "POST" {
+				crumb_var, crumb_err = sanitize.PostString(req, "crumb")
+			} else {
+				crumb_var, crumb_err = sanitize.GetString(req, "crumb")
+			}
+
+			if crumb_err != nil {
+				req = SetErrorContextWithRequest(req, crumb_err, go_http.StatusBadRequest)
+				error_handler.ServeHTTP(rsp, req)
 				return
 			}
 
-			rewrite_func := NewCrumbRewriteFunc(crumb_var)
-			rewrite_handler := rewrite.RewriteHTMLHandler(other, rewrite_func)
-
-			rewrite_handler.ServeHTTP(rsp, req)
-
-		case "POST":
-
-			crumb_var, err := sanitize.PostString(req, "crumb")
-
-			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
+			if crumb_var == "" {
+				req = SetErrorContextWithRequest(req, errors.New("Missing crumb"), go_http.StatusBadRequest)
+				error_handler.ServeHTTP(rsp, req)
 				return
 			}
 
-			ok, err := ValidateCrumb(cfg, req, crumb_var)
+			ok, err := cr.Validate(req, crumb_var)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				req = SetErrorContextWithRequest(req, err, go_http.StatusInternalServerError)
+				error_handler.ServeHTTP(rsp, req)
 				return
 			}
 
 			if !ok {
-				go_http.Error(rsp, "Forbidden", go_http.StatusForbidden)
+				req = SetErrorContextWithRequest(req, errors.New("Forbidden"), go_http.StatusForbidden)
+				error_handler.ServeHTTP(rsp, req)
 				return
 			}
 
-			other.ServeHTTP(rsp, req)
-
 		default:
-			other.ServeHTTP(rsp, req)
+			// pass
 		}
+
+		crumb_var, err := cr.Generate(req)
+
+		if err != nil {
+			req = SetErrorContextWithRequest(req, err, go_http.StatusInternalServerError)
+			error_handler.ServeHTTP(rsp, req)
+			return
+		}
+
+		rewrite_func := NewCrumbRewriteFunc(crumb_var)
+		rewrite_handler := rewrite.RewriteHTMLHandler(next_handler, rewrite_func)
+
+		rewrite_handler.ServeHTTP(rsp, req)
+
 	}
 
 	return go_http.HandlerFunc(fn)

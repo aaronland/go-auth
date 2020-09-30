@@ -1,10 +1,11 @@
 package database
 
 import (
+	"context"
 	"errors"
 	"github.com/aaronland/go-artisanal-integers"
 	"github.com/aaronland/go-artisanal-integers-proxy"
-	"github.com/whosonfirst/go-whosonfirst-pool"
+	"github.com/aaronland/go-pool"
 	"sync"
 )
 
@@ -13,7 +14,8 @@ var proxy_init sync.Once
 
 func proxy_setup() {
 
-	pl, err := pool.NewMemLIFOPool()
+	ctx := context.Background()
+	pl, err := pool.NewPool(ctx, "memory://")
 
 	if err != nil {
 		return

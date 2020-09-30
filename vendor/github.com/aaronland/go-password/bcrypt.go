@@ -1,8 +1,13 @@
 package password
 
 import (
+	"context"
 	"crypto/sha512"
+	"errors"
+	"fmt"
 	"github.com/patrickmn/go-hmaccrypt"
+	"net/url"
+	_ "log"
 )
 
 type BCryptPassword struct {
@@ -12,41 +17,58 @@ type BCryptPassword struct {
 	salt   string
 }
 
-func NewBCryptPasswordFromDigest(digest string, salt string) (Password, error) {
+func init() {
 
-	pepper := []byte(salt)
-	crypt := hmaccrypt.New(sha512.New, pepper)
+	ctx := context.Background()
+	err := RegisterPassword(ctx, "bcrypt", NewBCryptPassword)
 
-	p := BCryptPassword{
-		digest: digest,
-		crypt:  crypt,
-		salt:   salt,
+	if err != nil {
+		panic(err)
 	}
-
-	return &p, nil
 }
 
-func NewBCryptPassword(pswd string) (Password, error) {
+func NewBCryptPassword(ctx context.Context, uri string) (Password, error) {
 
-	salt, err := NewSalt()
+	u, err := url.Parse(uri)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return NewBCryptPasswordWithSalt(pswd, salt)
-}
+	pswd := u.Host
 
-func NewBCryptPasswordWithSalt(pswd string, salt string) (Password, error) {
+	q := u.Query()
+
+	digest := q.Get("digest")
+	salt := q.Get("salt")
+
+	if salt == "" {
+
+		s, err := NewSalt()
+
+		if err != nil {
+			return nil, err
+		}
+
+		salt = s
+	}
 
 	pepper := []byte(salt)
 	crypt := hmaccrypt.New(sha512.New, pepper)
 
-	b_pswd := []byte(pswd)
-	digest, err := crypt.Bcrypt(b_pswd, 10)
+	if digest == "" {
 
-	if err != nil {
-		return nil, err
+		if len(pswd) < 8 {
+			return nil, errors.New("Password too short")
+		}
+
+		d, err := crypt.Bcrypt([]byte(pswd), 10)
+
+		if err != nil {
+			return nil, err
+		}
+
+		digest = string(d)
 	}
 
 	p := BCryptPassword{
@@ -69,4 +91,8 @@ func (p *BCryptPassword) Salt() string {
 func (p *BCryptPassword) Compare(pswd string) error {
 
 	return p.crypt.BcryptCompare([]byte(p.digest), []byte(pswd))
+}
+
+func (p *BCryptPassword) String() string {
+	return fmt.Sprintf("bcrypt:///?digest=%s&salt=%s", p.digest, p.salt)
 }

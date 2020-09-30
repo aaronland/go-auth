@@ -1,6 +1,6 @@
 fmt:
 	go fmt *.go
-	go fmt cmd/*.go
+	go fmt cmd/**/*.go
 	go fmt service/*.go
 
 tools:

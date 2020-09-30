@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"github.com/aaronland/go-artisanal-integers"
 	"github.com/tidwall/gjson"
@@ -9,6 +10,12 @@ import (
 	"net/http"
 	"net/url"
 )
+
+func init() {
+	ctx := context.Background()
+	cl := NewAPIClient()
+	artisanalinteger.RegisterClient(ctx, "londonintegers", cl)
+}
 
 type LondonIntegersClient interface {
 	ExecuteMethod(string, *url.Values) (*APIResponse, error)
