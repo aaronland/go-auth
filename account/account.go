@@ -1,7 +1,9 @@
 package account
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"github.com/aaronland/go-password"
 	"github.com/aaronland/go-ucd-username"
 	"github.com/pquerna/otp"
@@ -183,7 +185,8 @@ func (acct *Account) UpdatePassword(password_raw string) (*Account, error) {
 
 func newPassword(password_raw string) (*Password, error) {
 
-	bcrypt_pswd, err := password.NewBCryptPassword(password_raw)
+	ctx := context.Background()
+	bcrypt_pswd, err := password.NewBCryptPassword(ctx, password_raw)
 
 	if err != nil {
 		return nil, err
@@ -202,7 +205,11 @@ func newPassword(password_raw string) (*Password, error) {
 }
 
 func (acct *Account) GetPassword() (password.Password, error) {
-	return password.NewBCryptPasswordFromDigest(acct.Password.Digest, acct.Password.Salt)
+
+	ctx := context.Background()
+	uri := fmt.Sprintf("bcrypt://?digest=%s&salt=%s", acct.Password.Digest, acct.Password.Salt)
+	
+	return password.NewPassword(ctx, uri)
 }
 
 func (acct *Account) GetMFASecret() (string, error) {
