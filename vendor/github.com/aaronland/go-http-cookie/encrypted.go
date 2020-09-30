@@ -1,41 +1,19 @@
 package cookie
 
 import (
-	"context"
 	"errors"
 	"github.com/aaronland/go-secretbox"
-	"github.com/awnumar/memguard"
-	"net/http"
-	"net/url"
+	go_http "net/http"
 )
-
-func init() {
-	ctx := context.Background()
-	RegisterCookie(ctx, "encrypted", NewEncryptedCookie)
-
-	memguard.CatchInterrupt()
-}
 
 type EncryptedCookie struct {
 	Cookie
 	name   string
-	secret *memguard.Enclave
+	secret string
 	salt   string
 }
 
-func NewEncryptedCookie(ctx context.Context, uri string) (Cookie, error) {
-
-	u, err := url.Parse(uri)
-
-	if err != nil {
-		return nil, err
-	}
-
-	q := u.Query()
-
-	name := q.Get("name")
-	secret := q.Get("secret")
-	salt := q.Get("salt")
+func NewEncryptedCookie(name string, secret string, salt string) (Cookie, error) {
 
 	if name == "" {
 		return nil, errors.New("Missing name")
@@ -49,88 +27,69 @@ func NewEncryptedCookie(ctx context.Context, uri string) (Cookie, error) {
 		return nil, errors.New("Missing salt")
 	}
 
-	secret_key := memguard.NewEnclave([]byte(secret))
-
 	c := EncryptedCookie{
 		name:   name,
-		secret: secret_key,
+		secret: secret,
 		salt:   salt,
 	}
 
 	return &c, nil
 }
 
-func (c *EncryptedCookie) GetString(req *http.Request) (string, error) {
+func (c *EncryptedCookie) Get(req *go_http.Request) (string, error) {
 
-	buf, err := c.Get(req)
+	http_cookie, err := req.Cookie(c.name)
 
 	if err != nil {
 		return "", err
 	}
 
-	defer buf.Destroy()
-
-	return buf.String(), nil
-}
-
-func (c *EncryptedCookie) Get(req *http.Request) (*memguard.LockedBuffer, error) {
-
-	http_cookie, err := req.Cookie(c.name)
-
-	if err != nil {
-		return nil, err
-	}
-
 	opts := secretbox.NewSecretboxOptions()
 	opts.Salt = c.salt
 
-	sb, err := secretbox.NewSecretboxWithEnclave(c.secret, opts)
+	sb, err := secretbox.NewSecretbox(c.secret, opts)
 
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return sb.Unlock(http_cookie.Value)
+	body, err := sb.Unlock([]byte(http_cookie.Value))
+
+	if err != nil {
+		return "", err
+	}
+
+	str_body := string(body)
+	return str_body, nil
 }
 
-func (c *EncryptedCookie) SetString(rsp http.ResponseWriter, value string) error {
+func (c *EncryptedCookie) Set(rsp go_http.ResponseWriter, body string) error {
 
-	buf := memguard.NewBufferFromBytes([]byte(value))
-	defer buf.Destroy()
+	http_cookie := &go_http.Cookie{
+		Value: body,
+	}
 
-	return c.Set(rsp, buf)
+	return c.SetCookie(rsp, http_cookie)
 }
 
-func (c *EncryptedCookie) Set(rsp http.ResponseWriter, buf *memguard.LockedBuffer) error {
-
-	http_cookie := &http.Cookie{}
-	return c.SetWithCookie(rsp, buf, http_cookie)
-}
-
-func (c *EncryptedCookie) SetStringWithCookie(rsp http.ResponseWriter, value string, http_cookie *http.Cookie) error {
-
-	buf := memguard.NewBufferFromBytes([]byte(value))
-	defer buf.Destroy()
-
-	return c.SetWithCookie(rsp, buf, http_cookie)
-}
-
-func (c *EncryptedCookie) SetWithCookie(rsp http.ResponseWriter, buf *memguard.LockedBuffer, http_cookie *http.Cookie) error {
+func (c *EncryptedCookie) SetCookie(rsp go_http.ResponseWriter, http_cookie *go_http.Cookie) error {
 
 	if http_cookie.Name != "" {
 		return errors.New("Cookie name already set")
 	}
 
+	body := http_cookie.Value
+
 	opts := secretbox.NewSecretboxOptions()
 	opts.Salt = c.salt
 
-	sb, err := secretbox.NewSecretboxWithEnclave(c.secret, opts)
+	sb, err := secretbox.NewSecretbox(c.secret, opts)
 
 	if err != nil {
 		return err
 	}
 
-	enc, err := sb.LockWithBuffer(buf)
+	enc, err := sb.Lock([]byte(body))
 
 	if err != nil {
 		return err
@@ -139,18 +98,18 @@ func (c *EncryptedCookie) SetWithCookie(rsp http.ResponseWriter, buf *memguard.L
 	http_cookie.Name = c.name
 	http_cookie.Value = enc
 
-	http.SetCookie(rsp, http_cookie)
+	go_http.SetCookie(rsp, http_cookie)
 	return nil
 }
 
-func (c *EncryptedCookie) Delete(rsp http.ResponseWriter) error {
+func (c *EncryptedCookie) Delete(rsp go_http.ResponseWriter) error {
 
-	http_cookie := http.Cookie{
+	http_cookie := go_http.Cookie{
 		Name:   c.name,
 		Value:  "",
 		MaxAge: -1,
 	}
 
-	http.SetCookie(rsp, &http_cookie)
+	go_http.SetCookie(rsp, &http_cookie)
 	return nil
 }

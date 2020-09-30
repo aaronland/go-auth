@@ -5,8 +5,8 @@ go 1.12
 require (
 	github.com/aaronland/go-artisanal-integers v0.1.1
 	github.com/aaronland/go-artisanal-integers-proxy v0.2.4
-	github.com/aaronland/go-http-cookie v0.3.2
-	github.com/aaronland/go-http-crumb v0.1.1
+	github.com/aaronland/go-http-cookie v0.0.2
+	github.com/aaronland/go-http-crumb v0.0.5
 	github.com/aaronland/go-http-rewrite v0.0.5
 	github.com/aaronland/go-http-sanitize v0.0.4
 	github.com/aaronland/go-password v0.1.0

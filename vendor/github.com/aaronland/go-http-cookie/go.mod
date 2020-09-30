@@ -1,10 +1,8 @@
 module github.com/aaronland/go-http-cookie
 
-go 1.12
-
 require (
-	github.com/aaronland/go-roster v0.0.1
-	github.com/aaronland/go-secretbox v0.3.0
-	github.com/aaronland/go-string v0.1.2
-	github.com/awnumar/memguard v0.22.2
+	github.com/aaronland/go-secretbox v0.1.0
+	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect
 )
+
+go 1.12

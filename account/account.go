@@ -208,7 +208,7 @@ func (acct *Account) GetPassword() (password.Password, error) {
 
 	ctx := context.Background()
 	uri := fmt.Sprintf("bcrypt://?digest=%s&salt=%s", acct.Password.Digest, acct.Password.Salt)
-	
+
 	return password.NewPassword(ctx, uri)
 }
 
