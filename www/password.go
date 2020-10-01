@@ -15,7 +15,7 @@ import (
 type PasswordHandlerOptions struct {
 	Credentials      auth.Credentials
 	AccountsDatabase database.AccountsDatabase
-	CrumbConfig      *crumb.CrumbConfig
+	Crumb            crumb.Crumb
 }
 
 func PasswordHandler(opts *PasswordHandlerOptions, templates *template.Template, t_name string) http.Handler {
@@ -136,5 +136,5 @@ func PasswordHandler(opts *PasswordHandlerOptions, templates *template.Template,
 	}
 
 	password_handler := http.HandlerFunc(fn)
-	return crumb.EnsureCrumbHandler(opts.CrumbConfig, password_handler)
+	return crumb.EnsureCrumbHandler(opts.Crumb, password_handler)
 }

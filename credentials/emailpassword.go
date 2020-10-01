@@ -24,7 +24,7 @@ type EmailPasswordCredentialsOptions struct {
 	CookieName   string
 	CookieSecret string
 	CookieSalt   string
-	CrumbConfig  *crumb.CrumbConfig
+	Crumb  crumb.Crumb
 }
 
 func DefaultEmailPasswordCredentialsOptions() *EmailPasswordCredentialsOptions {
@@ -181,7 +181,7 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 
 	signin_handler := go_http.HandlerFunc(fn)
 
-	return crumb.EnsureCrumbHandler(ep_auth.options.CrumbConfig, signin_handler)
+	return crumb.EnsureCrumbHandler(ep_auth.options.Crumb, signin_handler)
 }
 
 func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
@@ -280,7 +280,7 @@ func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Templ
 
 	signup_handler := go_http.HandlerFunc(fn)
 
-	return crumb.EnsureCrumbHandler(ep_auth.options.CrumbConfig, signup_handler)
+	return crumb.EnsureCrumbHandler(ep_auth.options.Crumb, signup_handler)
 }
 
 func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
@@ -349,7 +349,7 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 
 	signout_handler := go_http.HandlerFunc(fn)
 
-	return crumb.EnsureCrumbHandler(ep_auth.options.CrumbConfig, signout_handler)
+	return crumb.EnsureCrumbHandler(ep_auth.options.Crumb, signout_handler)
 }
 
 func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
