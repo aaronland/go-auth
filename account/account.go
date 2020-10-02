@@ -8,6 +8,7 @@ import (
 	"github.com/aaronland/go-ucd-username"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
+	_ "log"
 	"net/mail"
 	"time"
 )
@@ -186,8 +187,10 @@ func (acct *Account) UpdatePassword(password_raw string) (*Account, error) {
 func newPassword(password_raw string) (*Password, error) {
 
 	ctx := context.Background()
-	bcrypt_pswd, err := password.NewBCryptPassword(ctx, password_raw)
 
+	password_uri := fmt.Sprintf("bcrypt://%s", password_raw)
+	bcrypt_pswd, err := password.NewPassword(ctx, password_uri)
+	
 	if err != nil {
 		return nil, err
 	}

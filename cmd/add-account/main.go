@@ -28,7 +28,7 @@ func main() {
 	account_db, err := database.NewAccountsDatabase(ctx, *accts_uri)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to open accounts database, %v", err)
 	}
 
 	reader := bufio.NewReader(os.Stdin)
@@ -40,7 +40,7 @@ func main() {
 		addr, err := reader.ReadString('\n')
 
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Missing or invalid email address, %v", err)
 		}
 
 		*email = addr
@@ -52,7 +52,7 @@ func main() {
 		name, err := reader.ReadString('\n')
 
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Missing or invalid username, %v", err)
 		}
 
 		*username = name
@@ -64,7 +64,7 @@ func main() {
 		pswd, err := cli.GetPassword(pswd_opts)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Failed to register password, %v", err)
 		}
 
 		*password = pswd
@@ -75,19 +75,19 @@ func main() {
 	acct, err := account.NewAccount(*email, *password, *username)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to create new account, %v", err)
 	}
 
 	acct, err = account_db.AddAccount(acct)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to add new account, %v", err)
 	}
 
 	secret, err := acct.GetMFASecret()
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to retrieve MFA secret, %v", err)
 	}
 
 	log.Println(acct.ID, secret)
