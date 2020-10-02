@@ -18,12 +18,14 @@ import (
 )
 
 type EmailPasswordCredentialsOptions struct {
-	RootURL    string
-	SigninURL  string
-	SignupURL  string
-	SignoutURL string
-	CookieURI  string
-	Crumb      crumb.Crumb
+	RootURL          string
+	SigninURL        string
+	SignupURL        string
+	SignoutURL       string
+	CookieURI        string
+	Crumb            crumb.Crumb
+	AccountsDatabase database.AccountsDatabase
+	SessionsDatabase database.SessionsDatabase
 }
 
 func DefaultEmailPasswordCredentialsOptions() *EmailPasswordCredentialsOptions {
@@ -40,16 +42,21 @@ func DefaultEmailPasswordCredentialsOptions() *EmailPasswordCredentialsOptions {
 
 type EmailPasswordCredentials struct {
 	auth.Credentials
-	account_db  database.AccountsDatabase
-	sessions_db database.SessionsDatabase
-	options     *EmailPasswordCredentialsOptions
+	options *EmailPasswordCredentialsOptions
 }
 
-func NewEmailPasswordCredentials(db database.AccountsDatabase, opts *EmailPasswordCredentialsOptions) (auth.Credentials, error) {
+func NewEmailPasswordCredentials(ctx context.Context, opts *EmailPasswordCredentialsOptions) (auth.Credentials, error) {
+
+	if opts.AccountsDatabase == nil {
+		return nil, errors.New("Missing accounts database")
+	}
+
+	if opts.SessionsDatabase == nil {
+		return nil, errors.New("Missing sessions database")
+	}
 
 	ep_auth := EmailPasswordCredentials{
-		account_db: db,
-		options:    opts,
+		options: opts,
 	}
 
 	return &ep_auth, nil
@@ -144,7 +151,9 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 				return
 			}
 
-			acct, err := ep_auth.account_db.GetAccountByEmailAddress(str_email)
+			acct_db := ep_auth.options.AccountsDatabase
+
+			acct, err := acct_db.GetAccountByEmailAddress(str_email)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -261,7 +270,9 @@ func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Templ
 				return
 			}
 
-			acct, err = ep_auth.account_db.AddAccount(acct)
+			acct_db := ep_auth.options.AccountsDatabase
+
+			acct, err = acct_db.AddAccount(acct)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -401,7 +412,9 @@ func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Reque
 		return nil, err
 	}
 
-	acct, err := ep_auth.account_db.GetAccountByID(id)
+	acct_db := ep_auth.options.AccountsDatabase
+
+	acct, err := acct_db.GetAccountByID(id)
 
 	if err != nil {
 		return nil, err

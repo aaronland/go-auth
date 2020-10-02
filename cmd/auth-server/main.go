@@ -55,7 +55,8 @@ func main() {
 	server_uri := flag.String("server-uri", "http://localhost:8080", "...")
 
 	templates := flag.String("templates", "", "...")
-	accts_uri := flag.String("accounts-uri", "", "...")
+	accounts_uri := flag.String("accounts-uri", "", "...")
+	sessions_uri := flag.String("sessions-uri", "", "...")
 
 	auth_cookie_uri := flag.String("auth-cookie-uri", "", "...")
 
@@ -76,7 +77,13 @@ func main() {
 
 	ctx := context.Background()
 
-	account_db, err := database.NewAccountsDatabase(ctx, *accts_uri)
+	accounts_db, err := database.NewAccountsDatabase(ctx, *accounts_uri)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sessions_db, err := database.NewSessionsDatabase(ctx, *sessions_uri)
 
 	if err != nil {
 		log.Fatal(err)
@@ -129,10 +136,13 @@ func main() {
 
 	ep_opts := credentials.DefaultEmailPasswordCredentialsOptions()
 
+	ep_opts.AccountsDatabase = accounts_db
+	ep_opts.SessionsDatabase = sessions_db
+
 	ep_opts.CookieURI = *auth_cookie_uri
 	ep_opts.Crumb = cr
 
-	ep_creds, err := credentials.NewEmailPasswordCredentials(account_db, ep_opts)
+	ep_creds, err := credentials.NewEmailPasswordCredentials(ctx, ep_opts)
 
 	if err != nil {
 		log.Fatal(err)
@@ -170,13 +180,13 @@ func main() {
 
 		strict_totp_opts.CookieURI = *mfa_cookie_uri
 
-		common_totp_auth, err := credentials.NewTOTPCredentials(account_db, common_totp_opts)
+		common_totp_auth, err := credentials.NewTOTPCredentials(accounts_db, common_totp_opts)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		strict_totp_auth, err := credentials.NewTOTPCredentials(account_db, strict_totp_opts)
+		strict_totp_auth, err := credentials.NewTOTPCredentials(accounts_db, strict_totp_opts)
 
 		if err != nil {
 			log.Fatal(err)
@@ -211,7 +221,7 @@ func main() {
 
 	pswd_handler_opts := &www.PasswordHandlerOptions{
 		Credentials:      ep_creds,
-		AccountsDatabase: account_db,
+		AccountsDatabase: accounts_db,
 		Crumb:            cr,
 	}
 
@@ -239,7 +249,7 @@ func main() {
 
 		token_opts := &www.SiteTokenHandlerOptions{
 			Credentials:          ep_creds,
-			AccountsDatabase:     account_db,
+			AccountsDatabase:     accounts_db,
 			AccessTokensDatabase: token_db,
 		}
 
