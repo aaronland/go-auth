@@ -384,6 +384,11 @@ func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Reque
 	ck, err := req.Cookie(ep_auth.options.SessionCookieName)
 
 	if err != nil {
+
+		if err == go_http.ErrNoCookie {
+			return nil, nil
+		}
+
 		return nil, err
 	}
 

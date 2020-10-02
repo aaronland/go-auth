@@ -53,11 +53,11 @@ func main() {
 
 	server_uri := flag.String("server-uri", "http://localhost:8080", "...")
 
-	templates := flag.String("templates", "", "...")
+	templates := flag.String("templates", "./templates/*.html", "...")
 	accounts_uri := flag.String("accounts-uri", "", "...")
 	sessions_uri := flag.String("sessions-uri", "", "...")
 
-	crumb_uri := flag.String("crumb-uri", "", "...")
+	crumb_uri := flag.String("crumb-uri", "debug", "...")
 
 	session_cookie_name := flag.String("session-cookie-name", "s", "...")
 	session_cookie_ttl := flag.Int64("session-cookie-ttl", 3600, "...")
@@ -65,7 +65,7 @@ func main() {
 	require_mfa := flag.Bool("mfa", true, "...")
 	mfa_signin_url := flag.String("mfa-signin-url", "/mfa", "...")
 
-	mfa_cookie_name := flag.String("mfa-cookie-name", "", "...")
+	mfa_cookie_name := flag.String("mfa-cookie-name", "m", "...")
 	mfa_cookie_ttl := flag.Int64("mfa-cookie-ttl", 3600, "...")
 
 	allow_tokens := flag.Bool("tokens", false, "...")

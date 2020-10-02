@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/aaronland/go-auth/account"
 	"html/template"
-	"log"
+	_ "log"
 	go_http "net/http"
 )
 
@@ -53,8 +53,6 @@ func GetAccountContext(req *go_http.Request) (*account.Account, error) {
 }
 
 func IsAuthenticated(creds Credentials, req *go_http.Request) (bool, error) {
-
-	log.Println("IS AUTH")
 
 	acct, err := creds.GetAccountForRequest(req)
 

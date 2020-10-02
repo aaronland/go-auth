@@ -4,4 +4,4 @@ cli:
 	go build -mod vendor -o bin/auth-server cmd/auth-server/main.go
 
 debug:
-	go run -mod vendor cmd/auth-server/main.go  -accounts-uri fs://./tmp -auth-cookie-uri debug -crumb-uri debug -mfa-cookie-uri debug -templates './templates/*.html'
+	go run -mod vendor cmd/auth-server/main.go  -accounts-uri fs://./tmp -sessions-uri fs://./tmp debug -crumb-uri debug
