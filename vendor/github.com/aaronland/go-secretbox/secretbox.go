@@ -1,24 +1,27 @@
 package secretbox
 
 // https://godoc.org/golang.org/x/crypto/scrypt
+// https://godoc.org/github.com/awnumar/memguard
+// https://spacetime.dev/encrypting-secrets-in-memory
 
 import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"fmt"
+	"github.com/awnumar/memguard"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/scrypt"
 	"io"
-	"io/ioutil"
-	"log"
-	"os"
-	"path/filepath"
-	"strings"
+	
 )
 
+func init() {
+
+	memguard.CatchInterrupt()
+}
+
 type Secretbox struct {
-	Key     [32]byte
+	enclave *memguard.Enclave
 	options *SecretboxOptions
 }
 
@@ -41,23 +44,34 @@ func NewSecretboxOptions() *SecretboxOptions {
 
 func NewSecretbox(pswd string, opts *SecretboxOptions) (*Secretbox, error) {
 
+	buf := memguard.NewBufferFromBytes([]byte(pswd))
+	defer buf.Destroy()
+
+	return NewSecretboxWithBuffer(buf, opts)
+}
+
+func NewSecretboxWithBuffer(buf *memguard.LockedBuffer, opts *SecretboxOptions) (*Secretbox, error) {
+
 	// PLEASE TRIPLE-CHECK opts.Salt HERE...
 
 	N := 32768
 	r := 8
 	p := 1
 
-	skey, err := scrypt.Key([]byte(pswd), []byte(opts.Salt), N, r, p, 32)
+	key, err := scrypt.Key(buf.Bytes(), []byte(opts.Salt), N, r, p, 32)
 
 	if err != nil {
 		return nil, err
 	}
 
-	var key [32]byte
-	copy(key[:], skey)
+	enclave := memguard.NewEnclave(key)
+	return NewSecretboxWithEnclave(enclave, opts)
+}
+
+func NewSecretboxWithEnclave(enclave *memguard.Enclave, opts *SecretboxOptions) (*Secretbox, error) {
 
 	sb := Secretbox{
-		Key:     key,
+		enclave: enclave,
 		options: opts,
 	}
 
@@ -65,6 +79,27 @@ func NewSecretbox(pswd string, opts *SecretboxOptions) (*Secretbox, error) {
 }
 
 func (sb Secretbox) Lock(body []byte) (string, error) {
+
+	buf := memguard.NewBufferFromBytes(body)
+	defer buf.Destroy()
+
+	return sb.LockWithBuffer(buf)
+}
+
+func (sb Secretbox) LockWithReader(r io.Reader) (string, error) {
+
+	buf, err := memguard.NewBufferFromEntireReader(r)
+
+	if err != nil {
+		return "", err
+	}
+	
+	defer buf.Destroy()
+
+	return sb.LockWithBuffer(buf)
+}
+
+func (sb Secretbox) LockWithBuffer(buf *memguard.LockedBuffer) (string, error) {
 
 	var nonce [24]byte
 
@@ -74,43 +109,23 @@ func (sb Secretbox) Lock(body []byte) (string, error) {
 		return "", err
 	}
 
-	enc := secretbox.Seal(nonce[:], body, &nonce, &sb.Key)
+	key, err := sb.enclave.Open()
+
+	if err != nil {
+		return "", err
+	}
+
+	defer key.Destroy()
+
+	enc := secretbox.Seal(nonce[:], buf.Bytes(), &nonce, key.ByteArray32())
 	enc_hex := base64.StdEncoding.EncodeToString(enc)
 
 	return enc_hex, nil
 }
 
-func (sb Secretbox) LockFile(abs_path string) (string, error) {
+func (sb Secretbox) Unlock(body_hex string) (*memguard.LockedBuffer, error) {
 
-	root := filepath.Dir(abs_path)
-	fname := filepath.Base(abs_path)
-
-	body, err := ReadFile(abs_path)
-
-	if err != nil {
-		return "", err
-	}
-
-	enc_hex, err := sb.Lock(body)
-
-	if err != nil {
-		return "", err
-	}
-
-	enc_fname := fmt.Sprintf("%s%s", fname, sb.options.Suffix)
-	enc_path := filepath.Join(root, enc_fname)
-
-	if sb.options.Debug {
-		log.Printf("debugging is enabled so don't actually write %s\n", enc_path)
-		return enc_path, nil
-	}
-
-	return WriteFile([]byte(enc_hex), enc_path)
-}
-
-func (sb Secretbox) Unlock(body_hex []byte) ([]byte, error) {
-
-	body_str, err := base64.StdEncoding.DecodeString(string(body_hex))
+	body_str, err := base64.StdEncoding.DecodeString(body_hex)
 
 	if err != nil {
 		return nil, err
@@ -121,78 +136,20 @@ func (sb Secretbox) Unlock(body_hex []byte) ([]byte, error) {
 	var nonce [24]byte
 	copy(nonce[:], body[:24])
 
-	out, ok := secretbox.Open(nil, body[24:], &nonce, &sb.Key)
-
-	if !ok {
-		return nil, errors.New("Unable to open secretbox")
-	}
-
-	return out, nil
-}
-
-func (sb Secretbox) UnlockFile(abs_path string) (string, error) {
-
-	root := filepath.Dir(abs_path)
-	fname := filepath.Base(abs_path)
-	ext := filepath.Ext(abs_path)
-
-	if ext != sb.options.Suffix {
-		return "", errors.New("Unexpected suffix")
-	}
-
-	body_hex, err := ReadFile(abs_path)
-
-	if err != nil {
-		return "", err
-	}
-
-	out, err := sb.Unlock(body_hex)
-
-	if err != nil {
-		return "", err
-	}
-
-	out_fname := strings.TrimRight(fname, ext)
-	out_path := filepath.Join(root, out_fname)
-
-	if sb.options.Debug {
-		log.Printf("debugging is enabled so don't actually write %s\n", out_path)
-		return out_path, nil
-	}
-
-	return WriteFile(out, out_path)
-}
-
-func ReadFile(path string) ([]byte, error) {
-
-	fh, err := os.Open(path)
+	key, err := sb.enclave.Open()
 
 	if err != nil {
 		return nil, err
 	}
 
-	return ioutil.ReadAll(fh)
-}
+	defer key.Destroy()
 
-func WriteFile(body []byte, path string) (string, error) {
+	out, ok := secretbox.Open(nil, body[24:], &nonce, key.ByteArray32())
 
-	fh, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
-
-	if err != nil {
-		return "", err
+	if !ok {
+		return nil, errors.New("Unable to open secretbox")
 	}
 
-	_, err = fh.Write(body)
-
-	if err != nil {
-		return "", err
-	}
-
-	err = fh.Close()
-
-	if err != nil {
-		return "", err
-	}
-
-	return path, nil
+	buf := memguard.NewBufferFromBytes(out)
+	return buf, nil
 }

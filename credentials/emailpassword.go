@@ -366,7 +366,7 @@ func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Reque
 		return nil, err
 	}
 
-	body, err := ck.Get(req)
+	body, err := ck.GetString(req)
 
 	if err != nil && err == go_http.ErrNoCookie {
 		return nil, nil
@@ -438,5 +438,5 @@ func (ep_auth *EmailPasswordCredentials) setAuthCookie(rsp go_http.ResponseWrite
 
 	ck_value := fmt.Sprintf("%d:%s", acct.ID, p.Digest()) // WRAP THIS IN A FUNCTION
 
-	return ck.Set(rsp, ck_value)
+	return ck.SetString(rsp, ck_value)
 }
