@@ -8,10 +8,10 @@ import (
 )
 
 type SessionsDatabase interface {
-	GetSessionWithId(context.Context, string) (*SessionRecord, error)
-	AddSession(context.Context, *SessionRecord) error
-	UpdateSession(context.Context, *SessionRecord) error
-	RemoveSession(context.Context, *SessionRecord) error
+	GetSessionWithId(context.Context, string) (*session.SessionRecord, error)
+	AddSession(context.Context, *session.SessionRecord) error
+	UpdateSession(context.Context, *session.SessionRecord) error
+	RemoveSession(context.Context, *session.SessionRecord) error
 }
 
 type SessionsDatabaseInitializationFunc func(ctx context.Context, uri string) (SessionsDatabase, error)

@@ -2,21 +2,16 @@ package fs
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/aaronland/go-auth/session"
 	"github.com/aaronland/go-auth/database"
-	"io/ioutil"
+	"github.com/aaronland/go-auth/session"
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
-	"time"
 )
 
 const FSDATABASE_SESSIONS string = "sessions"
-const FSDATABASE_SESSIONS_POINTERS string = "sessions_pointers"
 
 type FSSessionsDatabase struct {
 	database.SessionsDatabase
@@ -51,7 +46,6 @@ func NewFSSessionsDatabase(ctx context.Context, uri string) (database.SessionsDa
 	}
 
 	subdirs := []string{
-		FSDATABASE_SESSIONS_POINTERS,
 		FSDATABASE_SESSIONS,
 	}
 
@@ -81,206 +75,55 @@ func NewFSSessionsDatabase(ctx context.Context, uri string) (database.SessionsDa
 	return db, nil
 }
 
-func (db *FSSessionsDatabase) AddSession(acct *session.SessionRecord) (*session.Session, error) {
+func (db *FSSessionsDatabase) AddSession(ctx context.Context, sess *session.SessionRecord) error {
 
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	pointers := db.pointersMap(acct)
+	sess_path := db.sessionPath(sess.SessionId)
 
-	for key, id := range pointers {
-
-		if db.pointerExists(key, id) {
-			msg := fmt.Sprintf("%s already taken", key) // technically this would leak email addresses...
-			return nil, errors.New(msg)
-		}
-	}
-
-	acct_id, err := database.NewID()
+	err := marshalData(sess, sess_path)
 
 	if err != nil {
-		return nil, err
-	}
-
-	acct.ID = acct_id
-
-	acct_path := db.sessionPath(acct_id)
-
-	err = marshalData(acct, acct_path)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.setPointers(acct_id, pointers)
-
-	if err != nil {
-		// remove acct here?
-		return nil, err
-	}
-
-	return acct, nil
-}
-
-func (db *FSSessionsDatabase) UpdateSession(acct *session.Session) (*session.Session, error) {
-
-	now := time.Now()
-	acct.LastModified = now.Unix()
-
-	acct_path := db.sessionPath(acct.ID)
-	err := marshalData(acct, acct_path)
-
-	if err != nil {
-		return nil, err
-	}
-
-	pointers_map := db.pointersMap(acct)
-
-	err = db.setPointers(acct.ID, pointers_map)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return acct, nil
-}
-
-func (db *FSSessionsDatabase) RemoveSession(acct *session.Session) (*session.Session, error) {
-
-	acct.Status = session.SESSION_STATUS_DELETED
-	acct, err := db.UpdateSession(acct)
-
-	if err != nil {
-		return nil, err
-	}
-
-	pointers_map := db.pointersMap(acct)
-
-	for pointer_key, pointer_id := range pointers_map {
-		pointer_path := db.pointerPath(pointer_key, pointer_id)
-		os.Remove(pointer_path)
-	}
-
-	return acct, nil
-}
-
-func (db *FSSessionsDatabase) GetSessionByID(acct_id int64) (*session.Session, error) {
-
-	acct_path := db.sessionPath(acct_id)
-
-	acct, err := unmarshalData(acct_path, "session")
-
-	if err != nil {
-		return nil, err
-	}
-
-	return acct.(*session.Session), nil
-}
-
-func (db *FSSessionsDatabase) GetSessionByEmailAddress(addr string) (*session.Session, error) {
-	return db.getSessionByPointer("address", addr)
-}
-
-func (db *FSSessionsDatabase) GetSessionByURL(addr string) (*session.Session, error) {
-	return db.getSessionByPointer("url", addr)
-}
-
-func (db *FSSessionsDatabase) getSessionByPointer(pointer_key string, pointer_id string) (*session.Session, error) {
-
-	acct_id, err := db.getPointer(pointer_key, pointer_id)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return db.GetSessionByID(acct_id)
-}
-
-func (db *FSSessionsDatabase) getPointer(pointer_key string, pointer_id string) (int64, error) {
-
-	pointer_path := db.pointerPath(pointer_key, pointer_id)
-
-	fh, err := os.Open(pointer_path)
-
-	if err != nil {
-		return -1, err
-	}
-
-	body, err := ioutil.ReadAll(fh)
-
-	if err != nil {
-		return -1, err
-	}
-
-	str_id := string(body)
-	return strconv.ParseInt(str_id, 10, 64)
-}
-
-func (db *FSSessionsDatabase) setPointers(acct_id int64, pointers map[string]string) error {
-
-	for pointer_key, pointer_id := range pointers {
-
-		err := db.setPointer(acct_id, pointer_key, pointer_id)
-
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	return nil
 }
 
-func (db *FSSessionsDatabase) setPointer(acct_id int64, pointer_key string, pointer_id string) error {
+func (db *FSSessionsDatabase) UpdateSession(ctx context.Context, sess *session.SessionRecord) error {
 
-	pointer_path := db.pointerPath(pointer_key, pointer_id)
-
-	err := ensurePath(pointer_path)
-
-	if err != nil {
-		return err
-	}
-
-	fh, err := os.OpenFile(pointer_path, os.O_CREATE|os.O_WRONLY, 0600)
+	sess_path := db.sessionPath(sess.SessionId)
+	err := marshalData(sess, sess_path)
 
 	if err != nil {
 		return err
 	}
 
-	str_id := strconv.FormatInt(acct_id, 10)
+	return nil
+}
 
-	_, err = fh.Write([]byte(str_id))
+func (db *FSSessionsDatabase) RemoveSession(ctx context.Context, sess *session.SessionRecord) error {
+
+	sess_path := db.sessionPath(sess.SessionId)
+	return os.Remove(sess_path)
+}
+
+func (db *FSSessionsDatabase) GetSessionWithId(ctx context.Context, sess_id string) (*session.SessionRecord, error) {
+
+	sess_path := db.sessionPath(sess_id)
+
+	sess, err := unmarshalData(sess_path, "session")
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return fh.Close()
+	return sess.(*session.SessionRecord), nil
 }
 
-func (db *FSSessionsDatabase) pointerExists(key string, id string) bool {
+func (db *FSSessionsDatabase) sessionPath(str_id string) string {
 
-	pointer_path := db.pointerPath(key, id)
-
-	_, err := os.Stat(pointer_path)
-
-	if err != nil {
-		return false
-	}
-
-	return true
-}
-
-func (db *FSSessionsDatabase) pointerPath(key string, id string) string {
-
-	pointers_root := filepath.Join(db.root, FSDATABASE_SESSIONS_POINTERS)
-	key_root := filepath.Join(pointers_root, key)
-
-	return filepath.Join(key_root, id)
-}
-
-func (db *FSSessionsDatabase) sessionPath(id int64) string {
-
-	str_id := strconv.FormatInt(id, 10)
 	fname := fmt.Sprintf("%s.json", str_id)
 
 	sessions_root := filepath.Join(db.root, FSDATABASE_SESSIONS)
