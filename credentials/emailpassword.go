@@ -18,12 +18,12 @@ import (
 )
 
 type EmailPasswordCredentialsOptions struct {
-	RootURL      string
-	SigninURL    string
-	SignupURL    string
-	SignoutURL   string
-	CookieURI    string
-	Crumb crumb.Crumb
+	RootURL    string
+	SigninURL  string
+	SignupURL  string
+	SignoutURL string
+	CookieURI  string
+	Crumb      crumb.Crumb
 }
 
 func DefaultEmailPasswordCredentialsOptions() *EmailPasswordCredentialsOptions {

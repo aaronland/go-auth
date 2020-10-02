@@ -7,7 +7,7 @@ github.com/aaronland/go-artisanal-integers-proxy
 github.com/aaronland/go-artisanal-integers-proxy/service
 # github.com/aaronland/go-brooklynintegers-api v1.2.1
 github.com/aaronland/go-brooklynintegers-api
-# github.com/aaronland/go-http-cookie v0.3.2
+# github.com/aaronland/go-http-cookie v0.3.3
 github.com/aaronland/go-http-cookie
 # github.com/aaronland/go-http-crumb v0.1.1
 github.com/aaronland/go-http-crumb

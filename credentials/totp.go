@@ -18,9 +18,9 @@ import (
 )
 
 type TOTPCredentialsOptions struct {
-	TTL          int64 // please make this a time.Duration...
-	Force        bool
-	SigninUrl    string
+	TTL       int64 // please make this a time.Duration...
+	Force     bool
+	SigninUrl string
 	CookieURI string
 }
 

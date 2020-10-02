@@ -18,6 +18,8 @@ github.com/aaronland/go-http-cookie v0.0.2 h1:PKJpfBL/w2ADg9sFyiOoPFhFF/QAFQYe2L
 github.com/aaronland/go-http-cookie v0.0.2/go.mod h1:KF6QghGeR7w7oNqRgvc9ITFQc+iV5N9Y2SbroNkxEPY=
 github.com/aaronland/go-http-cookie v0.3.2 h1:7RO8CS524qo1UxyKiEmACx4pWO8Kb8AiohtCW3zVd+Y=
 github.com/aaronland/go-http-cookie v0.3.2/go.mod h1:x8CK9UF7W+Audtu+CyBKjVfGEmysK4wr8+pA9WLk7iU=
+github.com/aaronland/go-http-cookie v0.3.3 h1:z2l/UmHg8k/MS/d7D8WYaNivITUEo0Z/VBhjJx0ZEbk=
+github.com/aaronland/go-http-cookie v0.3.3/go.mod h1:x8CK9UF7W+Audtu+CyBKjVfGEmysK4wr8+pA9WLk7iU=
 github.com/aaronland/go-http-crumb v0.0.3 h1:OWxjvFRQqKXckfqaFZwbxqQd+uX40H/8a9QKYMFZqGI=
 github.com/aaronland/go-http-crumb v0.0.3/go.mod h1:ctEyW8gwewZmT05jWRBm/HWNiwVw6jMyaddgndNs00Q=
 github.com/aaronland/go-http-crumb v0.0.5 h1:ZhBkvWUW9wsw+KYnOu0sHAeRpsfY9kj0wh7yA8qGA0M=

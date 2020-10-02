@@ -9,8 +9,9 @@ import (
 	"github.com/aaronland/go-auth/database"
 	_ "github.com/aaronland/go-auth/database/fs"
 	"github.com/aaronland/go-auth/www"
+	"github.com/aaronland/go-http-cookie"
+	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-server"
-	"github.com/aaronland/go-http-crumb"	
 	"html/template"
 	"log"
 	"net/http"
@@ -59,7 +60,7 @@ func main() {
 	auth_cookie_uri := flag.String("auth-cookie-uri", "", "...")
 
 	crumb_uri := flag.String("crumb-uri", "", "...")
-	
+
 	require_mfa := flag.Bool("mfa", true, "...")
 	mfa_cookie_uri := flag.String("mfa-cookie-uri", "", "...")
 	mfa_signin_url := flag.String("mfa-signin-url", "/mfa", "...")
@@ -98,19 +99,39 @@ func main() {
 		*crumb_uri = uri
 	}
 
+	cr, err := crumb.NewCrumb(ctx, *crumb_uri)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if *auth_cookie_uri == "debug" {
 
+		uri, err := cookie.NewRandomEncryptedCookieURI("a")
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		*auth_cookie_uri = uri
 	}
 
 	if *mfa_cookie_uri == "debug" {
 
+		uri, err := cookie.NewRandomEncryptedCookieURI("m")
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		*mfa_cookie_uri = uri
 	}
-	
+
 	ep_opts := credentials.DefaultEmailPasswordCredentialsOptions()
 
 	ep_opts.CookieURI = *auth_cookie_uri
-	ep_opts.CrumbURI = *crumb_uri
-	
+	ep_opts.Crumb = cr
+
 	ep_creds, err := credentials.NewEmailPasswordCredentials(account_db, ep_opts)
 
 	if err != nil {
@@ -191,7 +212,7 @@ func main() {
 	pswd_handler_opts := &www.PasswordHandlerOptions{
 		Credentials:      ep_creds,
 		AccountsDatabase: account_db,
-		Crumb:      cr,
+		Crumb:            cr,
 	}
 
 	pswd_handler := www.PasswordHandler(pswd_handler_opts, auth_templates, "password")

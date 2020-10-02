@@ -3,7 +3,9 @@ package cookie
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/aaronland/go-secretbox"
+	"github.com/aaronland/go-string/random"
 	"github.com/awnumar/memguard"
 	"net/http"
 	"net/url"
@@ -21,6 +23,27 @@ type EncryptedCookie struct {
 	name   string
 	secret *memguard.Enclave
 	salt   string
+}
+
+func NewRandomEncryptedCookieURI(name string) (string, error) {
+
+	r_opts := random.DefaultOptions()
+	r_opts.AlphaNumeric = true
+
+	secret, err := random.String(r_opts)
+
+	if err != nil {
+		return "", err
+	}
+
+	salt, err := random.String(r_opts)
+
+	if err != nil {
+		return "", err
+	}
+
+	cookie_uri := fmt.Sprintf("encrypted://?name=%s&secret=%s&salt=%s", name, secret, salt)
+	return cookie_uri, nil
 }
 
 func NewEncryptedCookie(ctx context.Context, uri string) (Cookie, error) {
