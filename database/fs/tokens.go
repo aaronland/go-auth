@@ -8,6 +8,7 @@ import (
 	"github.com/aaronland/go-auth/database"
 	"github.com/aaronland/go-auth/token"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -24,7 +25,25 @@ type FSAccessTokensDatabase struct {
 	mu   *sync.RWMutex
 }
 
-func NewFSAccessTokensDatabase(root string) (database.AccessTokensDatabase, error) {
+func init() {
+
+	ctx := context.Background()
+	err := database.RegisterAccessTokensDatabase(ctx, "fs", NewFSAccessTokensDatabase)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+func NewFSAccessTokensDatabase(ctx context.Context, uri string) (database.AccessTokensDatabase, error) {
+
+	u, err := url.Parse(uri)
+
+	if err != nil {
+		return nil, err
+	}
+
+	root := u.Path
 
 	abs_root, err := ensureRoot(root)
 

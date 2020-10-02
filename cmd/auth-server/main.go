@@ -1,13 +1,15 @@
 package main
 
 import (
+	"context"
 	"flag"
-	"fmt"
 	"github.com/aaronland/go-auth"
 	"github.com/aaronland/go-auth/account"
 	"github.com/aaronland/go-auth/credentials"
-	"github.com/aaronland/go-auth/database/fs"
+	"github.com/aaronland/go-auth/database"
+	_ "github.com/aaronland/go-auth/database/fs"
 	"github.com/aaronland/go-auth/www"
+	"github.com/aaronland/go-http-server"
 	"github.com/aaronland/go-string/dsn"
 	"html/template"
 	"log"
@@ -48,10 +50,11 @@ func IndexHandler(creds auth.Credentials, templates *template.Template, t_name s
 
 func main() {
 
-	host := flag.String("host", "localhost", "...")
-	port := flag.Int("port", 8080, "...")
+	server_uri := flag.String("server-uri", "http://localhost:8080", "...")
+
 	templates := flag.String("templates", "", "...")
-	accts_dsn := flag.String("accounts-dsn", "", "...")
+	accts_uri := flag.String("accounts-uri", "", "...")
+
 	auth_cookie_dsn := flag.String("auth-cookie-dsn", "", "...")
 
 	require_mfa := flag.Bool("mfa", true, "...")
@@ -60,18 +63,14 @@ func main() {
 	mfa_ttl := flag.Int64("mfa-ttl", 3600, "...")
 
 	allow_tokens := flag.Bool("tokens", false, "...")
-	tokens_dsn := flag.String("tokens-dsn", "", "...")
+	tokens_uri := flag.String("tokens-uri", "", "...")
 
 	// please update to use this
 	// https://gocloud.dev/howto/secrets
 
 	flag.Parse()
 
-	accts_cfg, err := dsn.StringToDSNWithKeys(*accts_dsn, "root")
-
-	if err != nil {
-		log.Fatal(err)
-	}
+	ctx := context.Background()
 
 	auth_cookie_cfg, err := dsn.StringToDSNWithKeys(*auth_cookie_dsn, "name", "secret", "salt")
 
@@ -85,7 +84,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	account_db, err := fs.NewFSAccountsDatabase(accts_cfg["root"])
+	account_db, err := database.NewAccountsDatabase(ctx, *accts_uri)
 
 	if err != nil {
 		log.Fatal(err)
@@ -215,13 +214,7 @@ func main() {
 			log.Fatal("Site tokens require the use of MFA tokens")
 		}
 
-		token_cfg, err := dsn.StringToDSNWithKeys(*tokens_dsn, "root")
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		token_db, err := fs.NewFSAccessTokensDatabase(token_cfg["root"])
+		token_db, err := database.NewAccessTokensDatabase(ctx, *tokens_uri)
 
 		if err != nil {
 			log.Fatal(err)
@@ -237,10 +230,15 @@ func main() {
 		mux.Handle("/token", token_handler)
 	}
 
-	endpoint := fmt.Sprintf("%s:%d", *host, *port)
-	log.Printf("Listening for requests on %s\n", endpoint)
+	s, err := server.NewServer(ctx, *server_uri)
 
-	err = http.ListenAndServe(endpoint, mux)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Listening for requests on %s\n", s.Address())
+
+	err = s.ListenAndServe(ctx, mux)
 
 	if err != nil {
 		log.Fatal(err)

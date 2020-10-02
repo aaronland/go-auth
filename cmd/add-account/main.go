@@ -2,12 +2,13 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"github.com/aaronland/go-auth/account"
-	"github.com/aaronland/go-auth/database/fs"
+	"github.com/aaronland/go-auth/database"
+	_ "github.com/aaronland/go-auth/database/fs"
 	"github.com/aaronland/go-password/cli"
-	"github.com/aaronland/go-string/dsn"
 	"log"
 	"os"
 )
@@ -18,17 +19,13 @@ func main() {
 	username := flag.String("username", "", "...")
 	password := flag.String("password", "", "...")
 
-	accts_dsn := flag.String("accounts-dsn", "", "...")
+	accts_uri := flag.String("accounts-uri", "", "...")
 
 	flag.Parse()
 
-	accts_cfg, err := dsn.StringToDSNWithKeys(*accts_dsn, "root")
+	ctx := context.Background()
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	account_db, err := fs.NewFSAccountsDatabase(accts_cfg["root"])
+	account_db, err := database.NewAccountsDatabase(ctx, *accts_uri)
 
 	if err != nil {
 		log.Fatal(err)

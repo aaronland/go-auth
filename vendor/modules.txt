@@ -15,6 +15,8 @@ github.com/aaronland/go-http-crumb
 github.com/aaronland/go-http-rewrite
 # github.com/aaronland/go-http-sanitize v0.0.4
 github.com/aaronland/go-http-sanitize
+# github.com/aaronland/go-http-server v0.0.5
+github.com/aaronland/go-http-server
 # github.com/aaronland/go-londonintegers-api v0.1.1
 github.com/aaronland/go-londonintegers-api
 # github.com/aaronland/go-missionintegers-api v0.1.1
@@ -35,6 +37,12 @@ github.com/aaronland/go-string/random
 github.com/aaronland/go-ucd
 # github.com/aaronland/go-ucd-username v0.1.0
 github.com/aaronland/go-ucd-username
+# github.com/aws/aws-lambda-go v1.10.0
+github.com/aws/aws-lambda-go/events
+github.com/aws/aws-lambda-go/lambda
+github.com/aws/aws-lambda-go/lambda/handlertrace
+github.com/aws/aws-lambda-go/lambda/messages
+github.com/aws/aws-lambda-go/lambdacontext
 # github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc
 github.com/boombuler/barcode
 github.com/boombuler/barcode/qr
@@ -56,6 +64,8 @@ github.com/tidwall/gjson
 github.com/tidwall/match
 # github.com/tidwall/pretty v1.0.0
 github.com/tidwall/pretty
+# github.com/whosonfirst/algnhsa v0.1.0
+github.com/whosonfirst/algnhsa
 # github.com/whosonfirst/go-sanitize v0.1.0
 github.com/whosonfirst/go-sanitize
 # github.com/whosonfirst/go-whosonfirst-log v0.1.0

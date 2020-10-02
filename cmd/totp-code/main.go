@@ -1,27 +1,24 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
-	"github.com/aaronland/go-auth/database/fs"
-	"github.com/aaronland/go-string/dsn"
+	"github.com/aaronland/go-auth/database"
+	_ "github.com/aaronland/go-auth/database/fs"
 	"log"
 )
 
 func main() {
 
 	addr := flag.String("email", "", "...")
-	accts_dsn := flag.String("accounts-dsn", "", "...")
+	accts_uri := flag.String("accounts-uri", "", "...")
 
 	flag.Parse()
 
-	accts_cfg, err := dsn.StringToDSNWithKeys(*accts_dsn, "root")
+	ctx := context.Background()
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	account_db, err := fs.NewFSAccountsDatabase(accts_cfg["root"])
+	account_db, err := database.NewAccountsDatabase(ctx, *accts_uri)
 
 	if err != nil {
 		log.Fatal(err)

@@ -9,6 +9,7 @@ require (
 	github.com/aaronland/go-http-crumb v0.0.5
 	github.com/aaronland/go-http-rewrite v0.0.5
 	github.com/aaronland/go-http-sanitize v0.0.4
+	github.com/aaronland/go-http-server v0.0.5
 	github.com/aaronland/go-password v0.1.0
 	github.com/aaronland/go-pool v0.0.0-20191128211702-88306299c758
 	github.com/aaronland/go-roster v0.0.2

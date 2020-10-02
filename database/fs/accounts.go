@@ -1,11 +1,13 @@
 package fs
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/aaronland/go-auth/account"
 	"github.com/aaronland/go-auth/database"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -22,7 +24,25 @@ type FSAccountsDatabase struct {
 	mu   *sync.RWMutex
 }
 
-func NewFSAccountsDatabase(root string) (database.AccountsDatabase, error) {
+func init() {
+
+	ctx := context.Background()
+	err := database.RegisterAccountsDatabase(ctx, "fs", NewFSAccountsDatabase)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+func NewFSAccountsDatabase(ctx context.Context, uri string) (database.AccountsDatabase, error) {
+
+	u, err := url.Parse(uri)
+
+	if err != nil {
+		return nil, err
+	}
+
+	root := u.Path
 
 	abs_root, err := ensureRoot(root)
 
