@@ -173,6 +173,8 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 
 		case "GET":
 
+			rsp.Header().Set("Content-type", "text/html")
+
 			err := templates.ExecuteTemplate(rsp, t_name, vars)
 
 			if err != nil {
@@ -194,6 +196,8 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 			valid := totp.Validate(str_code, secret)
 
 			if !valid {
+
+				rsp.Header().Set("Content-type", "text/html")
 
 				vars.Error = errors.New("Invalid code")
 				err := templates.ExecuteTemplate(rsp, t_name, vars)

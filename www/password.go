@@ -40,6 +40,8 @@ func PasswordHandler(opts *PasswordHandlerOptions, templates *template.Template,
 
 		render := func(with_vars PasswordVars) {
 
+			rsp.Header().Set("Content-type", "text/html")
+
 			err := templates.ExecuteTemplate(rsp, t_name, with_vars)
 
 			if err != nil {

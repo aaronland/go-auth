@@ -115,6 +115,8 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 				SignupURL: ep_auth.options.SignupURL,
 			}
 
+			rsp.Header().Set("Content-type", "text/html")
+
 			err := templates.ExecuteTemplate(rsp, t_name, vars)
 
 			if err != nil {
@@ -216,6 +218,8 @@ func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Templ
 
 		case "GET":
 
+			rsp.Header().Set("Content-type", "text/html")
+
 			err := templates.ExecuteTemplate(rsp, t_name, vars)
 
 			if err != nil {
@@ -312,6 +316,8 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 		switch req.Method {
 
 		case "GET":
+
+			rsp.Header().Set("Content-type", "text/html")
 
 			err := templates.ExecuteTemplate(rsp, t_name, vars)
 
