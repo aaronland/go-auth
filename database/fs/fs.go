@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	_ "fmt"
+	"fmt"
 	"github.com/aaronland/go-auth/account"
+	"github.com/aaronland/go-auth/session"
 	"github.com/aaronland/go-auth/token"
 	"github.com/whosonfirst/walk"
 	"io/ioutil"
@@ -84,10 +85,11 @@ func marshalData(data interface{}, path string) error {
 func unmarshalData(path string, data_type string) (interface{}, error) {
 
 	switch data_type {
-	case "account", "token":
+	case "account", "token", "session":
 		// pass
 	default:
-		return nil, errors.New("Unsupported interface")
+		msg := fmt.Sprintf("Unsupported interface '%s'", data_type)
+		return nil, errors.New(msg)
 	}
 
 	fh, err := os.Open(path)
@@ -115,6 +117,15 @@ func unmarshalData(path string, data_type string) (interface{}, error) {
 
 		if err == nil {
 			data = acct
+		}
+
+	case "session":
+
+		var sess *session.SessionRecord
+		err = json.Unmarshal(body, &sess)
+
+		if err == nil {
+			data = sess
 		}
 
 	case "token":
