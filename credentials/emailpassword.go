@@ -23,9 +23,6 @@ type EmailPasswordCredentialsOptions struct {
 	SignupURL    string
 	SignoutURL   string
 	CookieURI    string
-	CookieName   string	// deprecated
-	CookieSecret string	// deprecated
-	CookieSalt   string	// deprecated
 	Crumb  crumb.Crumb
 }
 

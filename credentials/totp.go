@@ -22,9 +22,6 @@ type TOTPCredentialsOptions struct {
 	Force        bool
 	SigninUrl    string
 	CookieURI string
-	CookieName   string	// deprecated
-	CookieSecret string	// deprecated
-	CookieSalt   string	// deprecated
 }
 
 func DefaultTOTPCredentialsOptions() *TOTPCredentialsOptions {
@@ -279,11 +276,11 @@ func (totp_auth *TOTPCredentials) setTOTPCookie(rsp go_http.ResponseWriter, req 
 	// log.Printf("TOTP COOKIE SET '%s'\n", cookie_str)
 
 	raw_cookie := &go_http.Cookie{
-		Value:  cookie_str,
+		// Value:  cookie_str,
 		MaxAge: 300,
 	}
 
-	return totp_cookie.SetCookie(rsp, raw_cookie)
+	return totp_cookie.SetStringWithCookie(rsp, cookie_str, raw_cookie)
 }
 
 func (totp_auth *TOTPCredentials) isRequestCookie(req *go_http.Request, totp_cookie cookie.Cookie) (bool, error) {
