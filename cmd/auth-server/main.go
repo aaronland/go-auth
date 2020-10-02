@@ -9,7 +9,6 @@ import (
 	"github.com/aaronland/go-auth/database"
 	_ "github.com/aaronland/go-auth/database/fs"
 	"github.com/aaronland/go-auth/www"
-	"github.com/aaronland/go-http-cookie"
 	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-server"
 	"html/template"
@@ -58,20 +57,19 @@ func main() {
 	accounts_uri := flag.String("accounts-uri", "", "...")
 	sessions_uri := flag.String("sessions-uri", "", "...")
 
-	auth_cookie_uri := flag.String("auth-cookie-uri", "", "...")
-
 	crumb_uri := flag.String("crumb-uri", "", "...")
 
+	session_cookie_name := flag.String("session-cookie-name", "s", "...")
+	session_cookie_ttl := flag.Int64("session-cookie-ttl", 3600, "...")
+
 	require_mfa := flag.Bool("mfa", true, "...")
-	mfa_cookie_uri := flag.String("mfa-cookie-uri", "", "...")
 	mfa_signin_url := flag.String("mfa-signin-url", "/mfa", "...")
-	mfa_ttl := flag.Int64("mfa-ttl", 3600, "...")
+
+	mfa_cookie_name := flag.String("mfa-cookie-name", "", "...")
+	mfa_cookie_ttl := flag.Int64("mfa-cookie-ttl", 3600, "...")
 
 	allow_tokens := flag.Bool("tokens", false, "...")
 	tokens_uri := flag.String("tokens-uri", "", "...")
-
-	// please update to use this
-	// https://gocloud.dev/howto/secrets
 
 	flag.Parse()
 
@@ -112,34 +110,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if *auth_cookie_uri == "debug" {
-
-		uri, err := cookie.NewRandomEncryptedCookieURI("a")
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		*auth_cookie_uri = uri
-	}
-
-	if *mfa_cookie_uri == "debug" {
-
-		uri, err := cookie.NewRandomEncryptedCookieURI("m")
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		*mfa_cookie_uri = uri
-	}
-
 	ep_opts := credentials.DefaultEmailPasswordCredentialsOptions()
 
 	ep_opts.AccountsDatabase = accounts_db
 	ep_opts.SessionsDatabase = sessions_db
-
-	ep_opts.CookieURI = *auth_cookie_uri
+	ep_opts.SessionCookieName = *session_cookie_name
+	ep_opts.SessionCookieTTL = *session_cookie_ttl
 	ep_opts.Crumb = cr
 
 	ep_creds, err := credentials.NewEmailPasswordCredentials(ctx, ep_opts)
@@ -170,23 +146,24 @@ func main() {
 
 		common_totp_opts := credentials.DefaultTOTPCredentialsOptions()
 		common_totp_opts.SigninUrl = *mfa_signin_url
-		common_totp_opts.TTL = *mfa_ttl
-
-		common_totp_opts.CookieURI = *mfa_cookie_uri
+		common_totp_opts.CookieName = *mfa_cookie_name
+		common_totp_opts.CookieTTL = *mfa_cookie_ttl
+		common_totp_opts.AccountsDatabase = accounts_db
 
 		strict_totp_opts := credentials.DefaultTOTPCredentialsOptions()
+		strict_totp_opts.CookieName = *mfa_cookie_name
+		strict_totp_opts.CookieTTL = *mfa_cookie_ttl
+		strict_totp_opts.AccountsDatabase = accounts_db
 		strict_totp_opts.SigninUrl = *mfa_signin_url
 		strict_totp_opts.Force = true
 
-		strict_totp_opts.CookieURI = *mfa_cookie_uri
-
-		common_totp_auth, err := credentials.NewTOTPCredentials(accounts_db, common_totp_opts)
+		common_totp_auth, err := credentials.NewTOTPCredentials(ctx, common_totp_opts)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		strict_totp_auth, err := credentials.NewTOTPCredentials(accounts_db, strict_totp_opts)
+		strict_totp_auth, err := credentials.NewTOTPCredentials(ctx, strict_totp_opts)
 
 		if err != nil {
 			log.Fatal(err)

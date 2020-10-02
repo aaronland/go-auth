@@ -5,6 +5,7 @@ import (
 	"github.com/aaronland/go-auth/session"
 	"github.com/aaronland/go-roster"
 	"net/url"
+	"time"
 )
 
 type SessionsDatabase interface {
@@ -17,6 +18,42 @@ type SessionsDatabase interface {
 type SessionsDatabaseInitializationFunc func(ctx context.Context, uri string) (SessionsDatabase, error)
 
 var sessions_roster roster.Roster
+
+func NewSessionRecord(ctx context.Context, db SessionsDatabase, ttl int64) (*session.SessionRecord, error) {
+
+	for {
+
+		session_id, err := session.NewSessionID()
+
+		if err != nil {
+			return nil, err
+		}
+
+		sess, _ := db.GetSessionWithId(ctx, session_id)
+
+		if sess != nil {
+			continue
+		}
+
+		now := time.Now()
+		ts := now.Unix()
+
+		expires := ts + ttl
+
+		sess = &session.SessionRecord{
+			SessionId: session_id,
+			Expires:   expires,
+		}
+
+		err = db.AddSession(ctx, sess)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return sess, nil
+	}
+}
 
 func RegisterSessionsDatabase(ctx context.Context, scheme string, init_func SessionsDatabaseInitializationFunc) error {
 

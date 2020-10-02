@@ -7,29 +7,30 @@ import (
 	"github.com/aaronland/go-auth"
 	"github.com/aaronland/go-auth/account"
 	"github.com/aaronland/go-auth/database"
-	"github.com/aaronland/go-http-cookie"
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
 	"html/template"
 	// "log"
 	go_http "net/http"
-	"strings"
 	"time"
 )
 
 type TOTPCredentialsOptions struct {
-	TTL       int64 // please make this a time.Duration...
-	Force     bool
-	SigninUrl string
-	CookieURI string
+	Force            bool
+	SigninUrl        string
+	CookieURI        string
+	CookieName       string
+	CookieTTL        int64 // please make this a time.Duration
+	AccountsDatabase database.AccountsDatabase
 }
 
 func DefaultTOTPCredentialsOptions() *TOTPCredentialsOptions {
 
 	opts := TOTPCredentialsOptions{
-		TTL:       3600,
-		Force:     false,
-		SigninUrl: "/mfa",
+		Force:      false,
+		SigninUrl:  "/mfa",
+		CookieName: "m",
+		CookieTTL:  3600,
 	}
 
 	return &opts
@@ -37,15 +38,25 @@ func DefaultTOTPCredentialsOptions() *TOTPCredentialsOptions {
 
 type TOTPCredentials struct {
 	auth.Credentials
-	account_db database.AccountsDatabase
-	options    *TOTPCredentialsOptions
+	options *TOTPCredentialsOptions
 }
 
-func NewTOTPCredentials(db database.AccountsDatabase, opts *TOTPCredentialsOptions) (auth.Credentials, error) {
+func NewTOTPCredentials(ctx context.Context, opts *TOTPCredentialsOptions) (auth.Credentials, error) {
+
+	if opts.AccountsDatabase == nil {
+		return nil, errors.New("Missing accounts database")
+	}
+
+	if opts.CookieName == "" {
+		return nil, errors.New("Invalid cookie name")
+	}
+
+	if opts.CookieTTL <= 0 {
+		return nil, errors.New("Invalid cookie TTL")
+	}
 
 	totp_auth := TOTPCredentials{
-		account_db: db,
-		options:    opts,
+		options: opts,
 	}
 
 	return &totp_auth, nil
@@ -76,45 +87,61 @@ func (totp_auth *TOTPCredentials) AuthHandler(next go_http.Handler) go_http.Hand
 
 		require_code := true
 
-		totp_cookie, totp_cookie_err := totp_auth.newTOTPCookie()
+		totp_cookie, err := req.Cookie(totp_auth.options.CookieName)
 
-		if totp_auth.options.Force {
+		if totp_cookie != nil {
 
-			// check to see if we've already auth-ed on this page
-			// in the last (n) seconds
+			require_code = false
 
-			if totp_cookie_err == nil {
+			/*
+						/*
+						// check to see if we've already auth-ed on this page
+						// in the last (n) seconds
 
-				ok, _ := totp_auth.isRequestCookie(req, totp_cookie)
+						if totp_auth.options.Force {
 
-				if ok {
-					require_code = false
+							cookie_str := ck.Value
+
+				cookie_parts := strings.Split(cookie_str, ":")
+
+				if len(cookie_parts) != 2 {
+					return false, errors.New("Invalid cookie string")
 				}
-			}
 
-		} else {
+				cookie_url := cookie_parts[1]
 
-			_, err := totp_cookie.Get(req)
-
-			if err == nil {
-
-				now := time.Now()
-				diff := now.Unix() - mfa.LastAuth
-
-				if diff < totp_auth.options.TTL {
-					require_code = false
+				if cookie_url != req.URL.Path {
+					return false, nil
 				}
-			}
+
+							ok, _ := totp_auth.isRequestCookie(req, totp_cookie)
+
+							if ok {
+								require_code = false
+							}
+						}
+
+					} else {
+
+						_, err := totp_cookie.Get(req)
+
+						if err == nil {
+
+						now := time.Now()
+						diff := now.Unix() - mfa.LastAuth
+
+						if diff < totp_auth.options.TTL {
+							require_code = false
+						}
+					}
+				}
+			*/
 		}
 
 		if require_code {
 			redir_url := fmt.Sprintf("%s?redir=%s", totp_auth.options.SigninUrl, req.URL.Path)
 			go_http.Redirect(rsp, req, redir_url, 303)
 			return
-		}
-
-		if totp_cookie != nil {
-			totp_auth.setTOTPCookie(rsp, req, totp_cookie)
 		}
 
 		req = auth.SetAccountContext(req, acct)
@@ -216,24 +243,38 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 			now := time.Now()
 			ts := now.Unix()
 
+			// is this bit (updating accounts) really necessary?
+
 			mfa.LastAuth = ts
 			acct.MFA = mfa
 
-			acct, err = totp_auth.account_db.UpdateAccount(acct)
+			accounts_db := totp_auth.options.AccountsDatabase
+			acct, err = accounts_db.UpdateAccount(acct)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
 				return
 			}
 
-			totp_cookie, err := totp_auth.newTOTPCookie()
+			expires := ts + totp_auth.options.CookieTTL
+			t_expires := time.Unix(expires, 0)
 
-			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			ck := &go_http.Cookie{
+				Name:     totp_auth.options.CookieName,
+				Value:    "mfa",
+				Secure:   true,
+				SameSite: go_http.SameSiteLaxMode,
+				Expires:  t_expires,
+				// Domain:
+				// Path:
+			}
+
+			if ck.String() == "" {
+				go_http.Error(rsp, "Invalid cookie", go_http.StatusInternalServerError)
 				return
 			}
 
-			totp_auth.setTOTPCookie(rsp, req, totp_cookie)
+			go_http.SetCookie(rsp, ck)
 
 			req = auth.SetAccountContext(req, acct)
 			next.ServeHTTP(rsp, req)
@@ -258,59 +299,4 @@ func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t
 
 func (totp_auth *TOTPCredentials) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
 	return auth.GetAccountContext(req)
-}
-
-func (totp_auth *TOTPCredentials) newTOTPCookie() (cookie.Cookie, error) {
-	ctx := context.Background()
-	return cookie.NewCookie(ctx, totp_auth.options.CookieURI)
-}
-
-func (totp_auth *TOTPCredentials) setTOTPCookie(rsp go_http.ResponseWriter, req *go_http.Request, totp_cookie cookie.Cookie) error {
-
-	now := time.Now()
-	ts := now.Unix()
-
-	ctx, _ := sanitize.GetString(req, "redir")
-
-	if ctx == "" {
-		ctx = req.URL.Path
-	}
-
-	cookie_str := fmt.Sprintf("%d:%s", ts, ctx)
-
-	// log.Printf("TOTP COOKIE SET '%s'\n", cookie_str)
-
-	raw_cookie := &go_http.Cookie{
-		Value:    cookie_str,
-		MaxAge:   300,
-		Secure:   true,
-		SameSite: go_http.SameSiteLaxMode,
-	}
-
-	return totp_cookie.SetStringWithCookie(rsp, cookie_str, raw_cookie)
-}
-
-func (totp_auth *TOTPCredentials) isRequestCookie(req *go_http.Request, totp_cookie cookie.Cookie) (bool, error) {
-
-	cookie_str, err := totp_cookie.GetString(req)
-
-	if err != nil {
-		return false, err
-	}
-
-	// log.Printf("TOTP COOKIE CHECK '%s' (%s)\n", cookie_str, req.URL.Path)
-
-	cookie_parts := strings.Split(cookie_str, ":")
-
-	if len(cookie_parts) != 2 {
-		return false, errors.New("Invalid cookie string")
-	}
-
-	cookie_url := cookie_parts[1]
-
-	if cookie_url != req.URL.Path {
-		return false, nil
-	}
-
-	return true, nil
 }

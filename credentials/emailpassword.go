@@ -3,38 +3,39 @@ package credentials
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/aaronland/go-auth"
 	"github.com/aaronland/go-auth/account"
 	"github.com/aaronland/go-auth/database"
-	"github.com/aaronland/go-http-cookie"
+	"github.com/aaronland/go-auth/session"
 	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-sanitize"
 	"html/template"
-	"log"
 	go_http "net/http"
-	"strconv"
-	"strings"
+	"time"
 )
 
 type EmailPasswordCredentialsOptions struct {
-	RootURL          string
-	SigninURL        string
-	SignupURL        string
-	SignoutURL       string
-	CookieURI        string
-	Crumb            crumb.Crumb
-	AccountsDatabase database.AccountsDatabase
-	SessionsDatabase database.SessionsDatabase
+	RootURL           string
+	SigninURL         string
+	SignupURL         string
+	SignoutURL        string
+	CookieURI         string // deprecated
+	SessionCookieName string
+	SessionCookieTTL  int64
+	Crumb             crumb.Crumb
+	AccountsDatabase  database.AccountsDatabase
+	SessionsDatabase  database.SessionsDatabase
 }
 
 func DefaultEmailPasswordCredentialsOptions() *EmailPasswordCredentialsOptions {
 
 	opts := EmailPasswordCredentialsOptions{
-		RootURL:    "/",
-		SigninURL:  "/signin",
-		SignupURL:  "/signup",
-		SignoutURL: "/signout",
+		RootURL:           "/",
+		SigninURL:         "/signin",
+		SignupURL:         "/signup",
+		SignoutURL:        "/signout",
+		SessionCookieName: "s",
+		SessionCookieTTL:  3600,
 	}
 
 	return &opts
@@ -53,6 +54,14 @@ func NewEmailPasswordCredentials(ctx context.Context, opts *EmailPasswordCredent
 
 	if opts.SessionsDatabase == nil {
 		return nil, errors.New("Missing sessions database")
+	}
+
+	if opts.SessionCookieName == "" {
+		return nil, errors.New("Invalid session cookie name")
+	}
+
+	if opts.SessionCookieTTL <= 0 {
+		return nil, errors.New("Invalid session cookie TTL")
 	}
 
 	ep_auth := EmailPasswordCredentials{
@@ -99,8 +108,6 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 	}
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
-
-		log.Println("EP SIGNING IN...")
 
 		ok, err := auth.IsAuthenticated(ep_auth, req)
 
@@ -160,6 +167,11 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 				return
 			}
 
+			if !acct.IsActive() {
+				go_http.Error(rsp, "Invalid user", go_http.StatusBadRequest)
+				return
+			}
+
 			p, err := acct.GetPassword()
 
 			if err != nil {
@@ -174,7 +186,7 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 				return
 			}
 
-			err = ep_auth.setAuthCookie(rsp, acct)
+			err = ep_auth.SetAccountForResponse(rsp, acct)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -279,7 +291,7 @@ func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Templ
 				return
 			}
 
-			err = ep_auth.setAuthCookie(rsp, acct)
+			err = ep_auth.SetAccountForResponse(rsp, acct)
 
 			if err != nil {
 				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
@@ -343,19 +355,13 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 
 		case "POST":
 
-			ck, err := ep_auth.newAuthCookie()
-
-			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
-				return
+			ck := go_http.Cookie{
+				Name:   ep_auth.options.SessionCookieName,
+				Value:  "",
+				MaxAge: -1,
 			}
 
-			err = ck.Delete(rsp)
-
-			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
-				return
-			}
+			go_http.SetCookie(rsp, &ck)
 
 			next.ServeHTTP(rsp, req)
 			return
@@ -373,57 +379,35 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 
 func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
 
-	log.Println("GET ACCOUNT...")
+	ctx := req.Context()
 
-	ck, err := ep_auth.newAuthCookie()
-
-	if err != nil {
-		return nil, err
-	}
-
-	log.Println("GET COOKIE STRING")
-
-	body, err := ck.GetString(req)
-
-	if err != nil && err == go_http.ErrNoCookie {
-		return nil, nil
-	}
+	ck, err := req.Cookie(ep_auth.options.SessionCookieName)
 
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("COOKIE BODY '%v'\n", body)
+	session_id := ck.Value
 
-	// WRAP THIS IN A FUNCTION
+	sessions_db := ep_auth.options.SessionsDatabase
+	accounts_db := ep_auth.options.AccountsDatabase
 
-	parts := strings.Split(body, ":")
-
-	if len(parts) != 2 {
-		return nil, errors.New("Invalid cookie")
-	}
-
-	str_id := parts[0]
-	pswd := parts[1]
-
-	id, err := strconv.ParseInt(str_id, 10, 64)
+	sess, err := sessions_db.GetSessionWithId(ctx, session_id)
 
 	if err != nil {
 		return nil, err
 	}
 
-	acct_db := ep_auth.options.AccountsDatabase
+	if session.IsExpired(sess) {
+		return nil, errors.New("Session expired")
+	}
 
-	acct, err := acct_db.GetAccountByID(id)
+	account_id := sess.AccountId
+
+	acct, err := accounts_db.GetAccountByID(account_id)
 
 	if err != nil {
 		return nil, err
-	}
-
-	p, err := acct.GetPassword()
-
-	if p.Digest() != pswd {
-		return nil, errors.New("Invalid user")
 	}
 
 	if !acct.IsActive() {
@@ -435,34 +419,40 @@ func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Reque
 
 func (ep_auth *EmailPasswordCredentials) SetAccountForResponse(rsp go_http.ResponseWriter, acct *account.Account) error {
 
-	return ep_auth.setAuthCookie(rsp, acct)
-}
-
-func (ep_auth *EmailPasswordCredentials) newAuthCookie() (cookie.Cookie, error) {
 	ctx := context.Background()
-	return cookie.NewCookie(ctx, ep_auth.options.CookieURI)
-}
 
-func (ep_auth *EmailPasswordCredentials) setAuthCookie(rsp go_http.ResponseWriter, acct *account.Account) error {
+	sessions_db := ep_auth.options.SessionsDatabase
 
-	p, err := acct.GetPassword()
+	sess, err := database.NewSessionRecord(ctx, sessions_db, ep_auth.options.SessionCookieTTL)
 
 	if err != nil {
 		return err
 	}
 
-	ck, err := ep_auth.newAuthCookie()
+	sess.AccountId = acct.ID
+
+	err = sessions_db.UpdateSession(ctx, sess)
 
 	if err != nil {
 		return err
 	}
 
-	cookie_str := fmt.Sprintf("%d:%s", acct.ID, p.Digest()) // WRAP THIS IN A FUNCTION
+	t_expires := time.Unix(sess.Expires, 0)
 
-	raw_cookie := &go_http.Cookie{
+	ck := &go_http.Cookie{
+		Name:     ep_auth.options.SessionCookieName,
+		Value:    sess.SessionId,
 		Secure:   true,
 		SameSite: go_http.SameSiteLaxMode,
+		Expires:  t_expires,
+		// Domain:
+		// Path:
 	}
 
-	return ck.SetStringWithCookie(rsp, cookie_str, raw_cookie)
+	if ck.String() == "" {
+		return errors.New("Invalid cookie")
+	}
+
+	go_http.SetCookie(rsp, ck)
+	return nil
 }
