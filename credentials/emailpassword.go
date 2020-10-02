@@ -11,7 +11,7 @@ import (
 	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-sanitize"
 	"html/template"
-	_ "log"
+	"log"
 	go_http "net/http"
 	"strconv"
 	"strings"
@@ -92,6 +92,8 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
+		log.Println("EP SIGNING IN...")
+		
 		ok, err := auth.IsAuthenticated(ep_auth, req)
 
 		if err != nil {
@@ -359,12 +361,16 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 
 func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
 
+	log.Println("GET ACCOUNT...")
+	
 	ck, err := ep_auth.newAuthCookie()
 
 	if err != nil {
 		return nil, err
 	}
 
+	log.Println("GET COOKIE STRING")
+	
 	body, err := ck.GetString(req)
 
 	if err != nil && err == go_http.ErrNoCookie {
@@ -375,6 +381,8 @@ func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Reque
 		return nil, err
 	}
 
+	log.Printf("COOKIE BODY '%v'\n", body)
+	
 	// WRAP THIS IN A FUNCTION
 
 	parts := strings.Split(body, ":")
