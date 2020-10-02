@@ -13,3 +13,4 @@ bin
 *.db
 .DS_Store
 debug*
+tmp
