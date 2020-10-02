@@ -87,16 +87,29 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cr, err := crumb.NewCrumb(ctx, *crumb_uri)
+	if *crumb_uri == "debug" {
 
-	if err != nil {
-		log.Fatal(err)
+		uri, err := crumb.NewRandomEncryptedCrumbURI(ctx, 3600, "debug")
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		*crumb_uri = uri
+	}
+
+	if *auth_cookie_uri == "debug" {
+
+	}
+
+	if *mfa_cookie_uri == "debug" {
+
 	}
 	
 	ep_opts := credentials.DefaultEmailPasswordCredentialsOptions()
 
 	ep_opts.CookieURI = *auth_cookie_uri
-	ep_opts.Crumb = cr
+	ep_opts.CrumbURI = *crumb_uri
 	
 	ep_creds, err := credentials.NewEmailPasswordCredentials(account_db, ep_opts)
 
