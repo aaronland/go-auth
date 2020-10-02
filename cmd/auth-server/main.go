@@ -10,7 +10,7 @@ import (
 	_ "github.com/aaronland/go-auth/database/fs"
 	"github.com/aaronland/go-auth/www"
 	"github.com/aaronland/go-http-server"
-	"github.com/aaronland/go-string/dsn"
+	"github.com/aaronland/go-http-crumb"	
 	"html/template"
 	"log"
 	"net/http"
@@ -35,6 +35,7 @@ func IndexHandler(creds auth.Credentials, templates *template.Template, t_name s
 			Account: acct,
 		}
 
+		rsp.Header().Set("Content-type", "text/html")
 		err = templates.ExecuteTemplate(rsp, t_name, vars)
 
 		if err != nil {
@@ -55,10 +56,12 @@ func main() {
 	templates := flag.String("templates", "", "...")
 	accts_uri := flag.String("accounts-uri", "", "...")
 
-	auth_cookie_dsn := flag.String("auth-cookie-dsn", "", "...")
+	auth_cookie_uri := flag.String("auth-cookie-uri", "", "...")
 
+	crumb_uri := flag.String("crumb-uri", "", "...")
+	
 	require_mfa := flag.Bool("mfa", true, "...")
-	mfa_cookie_dsn := flag.String("mfa-cookie-dsn", "", "...")
+	mfa_cookie_uri := flag.String("mfa-cookie-uri", "", "...")
 	mfa_signin_url := flag.String("mfa-signin-url", "/mfa", "...")
 	mfa_ttl := flag.Int64("mfa-ttl", 3600, "...")
 
@@ -72,18 +75,6 @@ func main() {
 
 	ctx := context.Background()
 
-	auth_cookie_cfg, err := dsn.StringToDSNWithKeys(*auth_cookie_dsn, "name", "secret", "salt")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	mfa_cookie_cfg, err := dsn.StringToDSNWithKeys(*mfa_cookie_dsn, "name", "secret", "salt")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	account_db, err := database.NewAccountsDatabase(ctx, *accts_uri)
 
 	if err != nil {
@@ -96,21 +87,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// TO DO : read from CLI
-
-	crumb_cfg, err := www.NewCrumbConfig()
+	cr, err := crumb.NewCrumb(ctx, *crumb_uri)
 
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	
 	ep_opts := credentials.DefaultEmailPasswordCredentialsOptions()
 
-	ep_opts.CookieName = auth_cookie_cfg["name"]
-	ep_opts.CookieSecret = auth_cookie_cfg["secret"]
-	ep_opts.CookieSalt = auth_cookie_cfg["salt"]
-	ep_opts.CrumbConfig = crumb_cfg
-
+	ep_opts.CookieURI = *auth_cookie_uri
+	ep_opts.Crumb = cr
+	
 	ep_creds, err := credentials.NewEmailPasswordCredentials(account_db, ep_opts)
 
 	if err != nil {
@@ -141,17 +128,13 @@ func main() {
 		common_totp_opts.SigninUrl = *mfa_signin_url
 		common_totp_opts.TTL = *mfa_ttl
 
-		common_totp_opts.CookieName = mfa_cookie_cfg["name"]
-		common_totp_opts.CookieSecret = mfa_cookie_cfg["secret"]
-		common_totp_opts.CookieSalt = mfa_cookie_cfg["salt"]
+		common_totp_opts.CookieURI = *mfa_cookie_uri
 
 		strict_totp_opts := credentials.DefaultTOTPCredentialsOptions()
 		strict_totp_opts.SigninUrl = *mfa_signin_url
 		strict_totp_opts.Force = true
 
-		strict_totp_opts.CookieName = mfa_cookie_cfg["name"]
-		strict_totp_opts.CookieSecret = mfa_cookie_cfg["secret"]
-		strict_totp_opts.CookieSalt = mfa_cookie_cfg["salt"]
+		strict_totp_opts.CookieURI = *mfa_cookie_uri
 
 		common_totp_auth, err := credentials.NewTOTPCredentials(account_db, common_totp_opts)
 
@@ -195,7 +178,7 @@ func main() {
 	pswd_handler_opts := &www.PasswordHandlerOptions{
 		Credentials:      ep_creds,
 		AccountsDatabase: account_db,
-		CrumbConfig:      crumb_cfg,
+		Crumb:      cr,
 	}
 
 	pswd_handler := www.PasswordHandler(pswd_handler_opts, auth_templates, "password")

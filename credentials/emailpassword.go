@@ -1,6 +1,7 @@
 package credentials
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/aaronland/go-auth"
@@ -21,10 +22,8 @@ type EmailPasswordCredentialsOptions struct {
 	SigninURL    string
 	SignupURL    string
 	SignoutURL   string
-	CookieName   string
-	CookieSecret string
-	CookieSalt   string
-	CrumbConfig  *crumb.CrumbConfig
+	CookieURI    string
+	Crumb crumb.Crumb
 }
 
 func DefaultEmailPasswordCredentialsOptions() *EmailPasswordCredentialsOptions {
@@ -183,7 +182,7 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 
 	signin_handler := go_http.HandlerFunc(fn)
 
-	return crumb.EnsureCrumbHandler(ep_auth.options.CrumbConfig, signin_handler)
+	return crumb.EnsureCrumbHandler(ep_auth.options.Crumb, signin_handler)
 }
 
 func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
@@ -284,7 +283,7 @@ func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Templ
 
 	signup_handler := go_http.HandlerFunc(fn)
 
-	return crumb.EnsureCrumbHandler(ep_auth.options.CrumbConfig, signup_handler)
+	return crumb.EnsureCrumbHandler(ep_auth.options.Crumb, signup_handler)
 }
 
 func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
@@ -355,7 +354,7 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 
 	signout_handler := go_http.HandlerFunc(fn)
 
-	return crumb.EnsureCrumbHandler(ep_auth.options.CrumbConfig, signout_handler)
+	return crumb.EnsureCrumbHandler(ep_auth.options.Crumb, signout_handler)
 }
 
 func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
@@ -366,7 +365,7 @@ func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Reque
 		return nil, err
 	}
 
-	body, err := ck.Get(req)
+	body, err := ck.GetString(req)
 
 	if err != nil && err == go_http.ErrNoCookie {
 		return nil, nil
@@ -418,8 +417,8 @@ func (ep_auth *EmailPasswordCredentials) SetAccountForResponse(rsp go_http.Respo
 }
 
 func (ep_auth *EmailPasswordCredentials) newAuthCookie() (cookie.Cookie, error) {
-
-	return cookie.NewAuthCookie(ep_auth.options.CookieName, ep_auth.options.CookieSecret, ep_auth.options.CookieSalt)
+	ctx := context.Background()
+	return cookie.NewCookie(ctx, ep_auth.options.CookieURI)
 }
 
 func (ep_auth *EmailPasswordCredentials) setAuthCookie(rsp go_http.ResponseWriter, acct *account.Account) error {
@@ -439,10 +438,9 @@ func (ep_auth *EmailPasswordCredentials) setAuthCookie(rsp go_http.ResponseWrite
 	cookie_str := fmt.Sprintf("%d:%s", acct.ID, p.Digest()) // WRAP THIS IN A FUNCTION
 
 	raw_cookie := &go_http.Cookie{
-		Value:    cookie_str,
 		Secure:   true,
 		SameSite: go_http.SameSiteLaxMode,
 	}
 
-	return ck.SetCookie(rsp, raw_cookie)
+	return ck.SetStringWithCookie(rsp, cookie_str, raw_cookie)
 }

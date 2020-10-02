@@ -1,7 +1,7 @@
 package credentials
 
 import (
-	_ "context"
+	"context"
 	"errors"
 	"fmt"
 	"github.com/aaronland/go-auth"
@@ -21,9 +21,7 @@ type TOTPCredentialsOptions struct {
 	TTL          int64 // please make this a time.Duration...
 	Force        bool
 	SigninUrl    string
-	CookieName   string
-	CookieSecret string
-	CookieSalt   string
+	CookieURI string
 }
 
 func DefaultTOTPCredentialsOptions() *TOTPCredentialsOptions {
@@ -263,20 +261,8 @@ func (totp_auth *TOTPCredentials) GetAccountForRequest(req *go_http.Request) (*a
 }
 
 func (totp_auth *TOTPCredentials) newTOTPCookie() (cookie.Cookie, error) {
-
-	if totp_auth.options.CookieName == "" {
-		return nil, errors.New("Missing cookie name")
-	}
-
-	if totp_auth.options.CookieSecret == "" {
-		return nil, errors.New("Missing cookie secret")
-	}
-
-	if totp_auth.options.CookieSalt == "" {
-		return nil, errors.New("Missing cookie salt")
-	}
-
-	return cookie.NewAuthCookie(totp_auth.options.CookieName, totp_auth.options.CookieSecret, totp_auth.options.CookieSalt)
+	ctx := context.Background()
+	return cookie.NewCookie(ctx, totp_auth.options.CookieURI)
 }
 
 func (totp_auth *TOTPCredentials) setTOTPCookie(rsp go_http.ResponseWriter, req *go_http.Request, totp_cookie cookie.Cookie) error {
@@ -301,12 +287,12 @@ func (totp_auth *TOTPCredentials) setTOTPCookie(rsp go_http.ResponseWriter, req 
 		SameSite: go_http.SameSiteLaxMode,
 	}
 
-	return totp_cookie.SetCookie(rsp, raw_cookie)
+	return totp_cookie.SetStringWithCookie(rsp, cookie_str, raw_cookie)
 }
 
 func (totp_auth *TOTPCredentials) isRequestCookie(req *go_http.Request, totp_cookie cookie.Cookie) (bool, error) {
 
-	cookie_str, err := totp_cookie.Get(req)
+	cookie_str, err := totp_cookie.GetString(req)
 
 	if err != nil {
 		return false, err
