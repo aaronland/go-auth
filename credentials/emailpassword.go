@@ -1,6 +1,7 @@
 package credentials
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/aaronland/go-auth"
@@ -21,9 +22,10 @@ type EmailPasswordCredentialsOptions struct {
 	SigninURL    string
 	SignupURL    string
 	SignoutURL   string
-	CookieName   string
-	CookieSecret string
-	CookieSalt   string
+	CookieURI    string
+	CookieName   string	// deprecated
+	CookieSecret string	// deprecated
+	CookieSalt   string	// deprecated
 	Crumb  crumb.Crumb
 }
 
@@ -418,8 +420,8 @@ func (ep_auth *EmailPasswordCredentials) SetAccountForResponse(rsp go_http.Respo
 }
 
 func (ep_auth *EmailPasswordCredentials) newAuthCookie() (cookie.Cookie, error) {
-
-	return cookie.NewAuthCookie(ep_auth.options.CookieName, ep_auth.options.CookieSecret, ep_auth.options.CookieSalt)
+	ctx := context.Background()
+	return cookie.NewCookie(ctx, ep_auth.options.CookieURI)
 }
 
 func (ep_auth *EmailPasswordCredentials) setAuthCookie(rsp go_http.ResponseWriter, acct *account.Account) error {
