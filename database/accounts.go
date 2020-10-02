@@ -1,9 +1,9 @@
 package database
 
 import (
+	"context"
 	"github.com/aaronland/go-auth/account"
 	"github.com/aaronland/go-roster"
-	"context"
 	"net/url"
 )
 
