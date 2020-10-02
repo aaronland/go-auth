@@ -96,11 +96,16 @@ func (totp_auth *TOTPCredentials) AuthHandler(next go_http.Handler) go_http.Hand
 
 		} else {
 
-			now := time.Now()
-			diff := now.Unix() - mfa.LastAuth
+			_, err := totp_cookie.Get(req)
 
-			if diff < totp_auth.options.TTL {
-				require_code = false
+			if err == nil {
+				
+				now := time.Now()
+				diff := now.Unix() - mfa.LastAuth
+				
+				if diff < totp_auth.options.TTL {
+					require_code = false
+				}
 			}
 		}
 
@@ -292,6 +297,8 @@ func (totp_auth *TOTPCredentials) setTOTPCookie(rsp go_http.ResponseWriter, req 
 	raw_cookie := &go_http.Cookie{
 		Value:  cookie_str,
 		MaxAge: 300,
+		Secure: true,
+		SameSite: go_http.SameSiteLaxMode,
 	}
 
 	return totp_cookie.SetCookie(rsp, raw_cookie)
