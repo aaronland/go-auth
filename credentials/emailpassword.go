@@ -23,7 +23,7 @@ type EmailPasswordCredentialsOptions struct {
 	SignupURL    string
 	SignoutURL   string
 	CookieURI    string
-	Crumb  crumb.Crumb
+	Crumb crumb.Crumb
 }
 
 func DefaultEmailPasswordCredentialsOptions() *EmailPasswordCredentialsOptions {
