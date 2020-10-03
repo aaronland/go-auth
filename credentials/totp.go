@@ -8,6 +8,7 @@ import (
 	"github.com/aaronland/go-auth/account"
 	"github.com/aaronland/go-auth/cookie"
 	"github.com/aaronland/go-auth/database"
+	"github.com/aaronland/go-auth/session"
 	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
@@ -84,7 +85,6 @@ func (totp_auth *TOTPCredentials) AuthHandler(next http.Handler) http.Handler {
 		}
 
 		if acct == nil {
-
 			log.Println("MFA missing account, go to signin")
 			http.Redirect(rsp, req, "/signin", 303)
 			return
@@ -102,13 +102,20 @@ func (totp_auth *TOTPCredentials) AuthHandler(next http.Handler) http.Handler {
 		totp_cookie, err := req.Cookie(totp_auth.options.TOTPCookieConfig.Name)
 
 		if totp_cookie != nil {
-			require_code = false
+
+			sessions_db := totp_auth.options.SessionsDatabase
+
+			session_id := totp_cookie.Value
+			ctx := req.Context()
+
+			sess, err := sessions_db.GetSessionWithId(ctx, session_id)
+
+			if err == nil && !session.IsExpired(sess) {
+				require_code = false
+			}
 		}
 
-		log.Println("MFA require code", require_code, totp_cookie, err)
-
 		if require_code {
-
 			log.Println("MFA require code, redirect to", totp_auth.options.SigninUrl)
 			redir_url := fmt.Sprintf("%s?redir=%s", totp_auth.options.SigninUrl, req.URL.Path)
 			http.Redirect(rsp, req, redir_url, 303)

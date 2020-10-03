@@ -144,7 +144,7 @@ func main() {
 	mfa_opts.SigninUrl = *mfa_signin_url
 	mfa_opts.TOTPCookieConfig = mfa_cookie_cfg
 	mfa_opts.AccountsDatabase = accounts_db
-	mfa_opts.SessionsDatabase = sessions_db	
+	mfa_opts.SessionsDatabase = sessions_db
 	mfa_opts.Crumb = cr
 
 	mfa_creds, err := credentials.NewTOTPCredentials(ctx, mfa_opts)
