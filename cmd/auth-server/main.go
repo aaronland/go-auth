@@ -123,7 +123,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create email/password credentials", err)
 	}
-	
+
 	mfa_opts := credentials.DefaultTOTPCredentialsOptions()
 	mfa_opts.SigninUrl = *mfa_signin_url
 	mfa_opts.CookieName = *mfa_cookie_name
@@ -135,7 +135,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create MFA credentials", err)
 	}
-	
+
 	mux := http.NewServeMux()
 
 	index_handler := IndexHandler(ep_creds, auth_templates, "index")
@@ -143,40 +143,40 @@ func main() {
 	index_handler = ep_creds.AuthHandler(index_handler)
 
 	mux.Handle("/", index_handler)
-	
+
 	query_redirect_opts := www.DefaultQueryRedirectHandlerOptions()
 	query_redirect_handler := www.NewQueryRedirectHandler(query_redirect_opts)
 
 	signin_handler := ep_creds.SigninHandler(auth_templates, "signin", query_redirect_handler)
 	signin_handler = mfa_creds.AuthHandler(signin_handler)
-	// signin_handler = ep_creds.AuthHandler(signin_handler)	
+	// signin_handler = ep_creds.AuthHandler(signin_handler)
 
 	mux.Handle(ep_opts.SigninURL, signin_handler)
-	
+
 	// signup_handler := ep_creds.SignupHandler(auth_templates, "signup", query_redirect_handler)
 	// mux.Handle(ep_opts.SignupURL, signup_handler)
-	
+
 	signout_handler := ep_creds.SignoutHandler(auth_templates, "signout", query_redirect_handler)
 	// STUFF HERE
 	mux.Handle(ep_opts.SignoutURL, signout_handler)
-	
+
 	mfa_handler := mfa_creds.SigninHandler(auth_templates, "totp", query_redirect_handler)
 	//mfa_handler = mfa_creds.AuthHandler(mfa_handler)
-	mfa_handler = ep_creds.AuthHandler(mfa_handler)	
+	mfa_handler = ep_creds.AuthHandler(mfa_handler)
 
 	mux.Handle("/mfa", mfa_handler)
-	
-	/*
-	pswd_handler_opts := &www.PasswordHandlerOptions{
-		Credentials:      ep_creds,
-		AccountsDatabase: accounts_db,
-		Crumb:            cr,
-	}
 
-	pswd_handler := www.PasswordHandler(pswd_handler_opts, auth_templates, "password")
-	pswd_handler = strict_auth_handler(pswd_handler)
+	/*
+		pswd_handler_opts := &www.PasswordHandlerOptions{
+			Credentials:      ep_creds,
+			AccountsDatabase: accounts_db,
+			Crumb:            cr,
+		}
+
+		pswd_handler := www.PasswordHandler(pswd_handler_opts, auth_templates, "password")
+		pswd_handler = strict_auth_handler(pswd_handler)
 	*/
-	
+
 	s, err := server.NewServer(ctx, *server_uri)
 
 	if err != nil {

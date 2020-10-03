@@ -20,7 +20,6 @@ type EmailPasswordCredentialsOptions struct {
 	SigninURL         string
 	SignupURL         string
 	SignoutURL        string
-	CookieURI         string // deprecated
 	SessionCookieName string
 	SessionCookieTTL  int64
 	Crumb             crumb.Crumb
@@ -81,7 +80,7 @@ func (ep_auth *EmailPasswordCredentials) AuthHandler(next http.Handler) http.Han
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
 		log.Println("EP Auth handler")
-		
+
 		acct, err := ep_auth.GetAccountForRequest(req)
 
 		if err != nil {
@@ -118,7 +117,7 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
 		log.Println("EP sign in URL")
-		
+
 		ok, err := auth.IsAuthenticated(ep_auth, req)
 
 		if err != nil {
@@ -126,7 +125,7 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 		}
 
 		log.Println("EP is auth", ok, err)
-		
+
 		if ok {
 
 			log.Println("EP is auth, go to next", next)
@@ -220,7 +219,7 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 
 	signin_handler := http.HandlerFunc(fn)
 	//return signin_handler
-	
+
 	return crumb.EnsureCrumbHandler(ep_auth.options.Crumb, signin_handler)
 }
 

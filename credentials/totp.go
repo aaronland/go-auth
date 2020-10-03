@@ -67,7 +67,7 @@ func (totp_auth *TOTPCredentials) AuthHandler(next http.Handler) http.Handler {
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
 		log.Println("MFA Auth Handler")
-		
+
 		acct, err := totp_auth.GetAccountForRequest(req)
 
 		if err != nil {

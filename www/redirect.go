@@ -2,9 +2,9 @@ package www
 
 import (
 	"github.com/aaronland/go-http-sanitize"
+	"log"
 	go_http "net/http"
 	"strings"
-	"log"
 )
 
 type QueryRedirectHandlerOptions struct {
@@ -39,7 +39,7 @@ func NewQueryRedirectHandler(opts *QueryRedirectHandlerOptions) go_http.Handler 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
 		log.Println("Query redirect")
-		
+
 		redir, err := sanitize.RequestString(req, opts.RedirectParameter)
 
 		if err != nil {

@@ -15,6 +15,7 @@ require (
 	github.com/aaronland/go-string v0.1.2
 	github.com/aaronland/go-ucd-username v0.1.0
 	github.com/pquerna/otp v1.2.0
+	github.com/senseyeio/duration v0.0.0-20180430131211-7c2a214ada46
 	github.com/whosonfirst/walk v0.0.1
 	golang.org/x/net v0.0.0-20201002202402-0a1ea396d57c
 )
