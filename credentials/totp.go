@@ -22,6 +22,7 @@ type TOTPCredentialsOptions struct {
 	SigninUrl        string
 	TOTPCookieConfig *cookie.Config
 	AccountsDatabase database.AccountsDatabase
+	SessionsDatabase database.SessionsDatabase
 	Crumb            crumb.Crumb
 }
 
@@ -44,6 +45,10 @@ func NewTOTPCredentials(ctx context.Context, opts *TOTPCredentialsOptions) (auth
 
 	if opts.AccountsDatabase == nil {
 		return nil, errors.New("Missing accounts database")
+	}
+
+	if opts.SessionsDatabase == nil {
+		return nil, errors.New("Missing sessions database")
 	}
 
 	if opts.TOTPCookieConfig == nil {
@@ -209,10 +214,10 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 				return
 			}
 
+			// is this bit (updating accounts) really necessary?
+
 			now := time.Now()
 			ts := now.Unix()
-
-			// is this bit (updating accounts) really necessary?
 
 			mfa.LastAuth = ts
 			acct.MFA = mfa
@@ -225,17 +230,15 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 				return
 			}
 
-			ctx := req.Context()
-			ck, err := totp_auth.options.TOTPCookieConfig.NewCookie(ctx, "mfa")
+			err = totp_auth.SetAccountForResponse(rsp, acct)
 
 			if err != nil {
 				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			http.SetCookie(rsp, ck)
-
 			req = auth.SetAccountContext(req, acct)
+
 			next.ServeHTTP(rsp, req)
 			return
 
@@ -260,4 +263,38 @@ func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t
 
 func (totp_auth *TOTPCredentials) GetAccountForRequest(req *http.Request) (*account.Account, error) {
 	return auth.GetAccountContext(req)
+}
+
+func (totp_auth *TOTPCredentials) SetAccountForResponse(rsp http.ResponseWriter, acct *account.Account) error {
+
+	ctx := context.Background()
+
+	ttl := totp_auth.options.TOTPCookieConfig.TTL
+
+	if ttl == nil {
+		return errors.New("Invalid cookie TTL")
+	}
+
+	now := time.Now()
+	then := ttl.Shift(now)
+
+	diff := then.Sub(now)
+	session_ttl := int64(diff.Seconds())
+
+	sessions_db := totp_auth.options.SessionsDatabase
+
+	sess, err := database.NewSessionRecord(ctx, sessions_db, session_ttl)
+
+	if err != nil {
+		return err
+	}
+
+	ck, err := totp_auth.options.TOTPCookieConfig.NewCookie(ctx, sess.SessionId)
+
+	if err != nil {
+		return err
+	}
+
+	http.SetCookie(rsp, ck)
+	return nil
 }
