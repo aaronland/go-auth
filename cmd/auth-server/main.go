@@ -62,14 +62,14 @@ func main() {
 	session_cookie_name := flag.String("session-cookie-name", "s", "...")
 	session_cookie_ttl := flag.Int64("session-cookie-ttl", 3600, "...")
 
-	require_mfa := flag.Bool("mfa", true, "...")
+	// require_mfa := flag.Bool("mfa", true, "...")
 	mfa_signin_url := flag.String("mfa-signin-url", "/mfa", "...")
 
 	mfa_cookie_name := flag.String("mfa-cookie-name", "m", "...")
 	mfa_cookie_ttl := flag.Int64("mfa-cookie-ttl", 3600, "...")
 
-	allow_tokens := flag.Bool("tokens", false, "...")
-	tokens_uri := flag.String("tokens-uri", "", "...")
+	// allow_tokens := flag.Bool("tokens", false, "...")
+	// tokens_uri := flag.String("tokens-uri", "", "...")
 
 	flag.Parse()
 
@@ -121,101 +121,48 @@ func main() {
 	ep_creds, err := credentials.NewEmailPasswordCredentials(ctx, ep_opts)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to create email/password credentials", err)
 	}
+	
+	mfa_opts := credentials.DefaultTOTPCredentialsOptions()
+	mfa_opts.SigninUrl = *mfa_signin_url
+	mfa_opts.CookieName = *mfa_cookie_name
+	mfa_opts.CookieTTL = *mfa_cookie_ttl
+	mfa_opts.AccountsDatabase = accounts_db
 
+	mfa_creds, err := credentials.NewTOTPCredentials(ctx, mfa_opts)
+
+	if err != nil {
+		log.Fatalf("Failed to create MFA credentials", err)
+	}
+	
 	mux := http.NewServeMux()
 
-	/*
+	index_handler := IndexHandler(ep_creds, auth_templates, "index")
+	index_handler = mfa_creds.AuthHandler(index_handler)
+	index_handler = ep_creds.AuthHandler(index_handler)
 
-> make debug
-go run -mod vendor cmd/auth-server/main.go  -accounts-uri fs://./tmp -sessions-uri fs://./tmp debug -crumb-uri debug
-2020/10/02 17:03:14 Listening for requests on http://localhost:8080
-2020/10/02 17:03:17 EP sign in URL
-2020/10/02 17:03:17 EP is auth true <nil>
-2020/10/02 17:03:17 EP is auth, go to next 0x13daaf0
-2020/10/02 17:03:17 Redirect to  /mfa
-2020/10/02 17:03:17 EP Auth handler
-2020/10/02 17:03:17 EP set account context
-2020/10/02 17:03:17 EP go to next 0x13d0d00
-2020/10/02 17:03:17 MFA Auth Handler
-2020/10/02 17:03:17 MFA require code, redirect to /mfa
-2020/10/02 17:03:17 EP Auth handler
-2020/10/02 17:03:17 EP set account context
-2020/10/02 17:03:17 EP go to next 0x13d1180
-
-	*/
+	mux.Handle("/", index_handler)
 	
-	// at this point the order of the handlers is relevant which is unfortunate
-	// but there you go... because MFA is optional (20190710/thisisaaronland)
-
-	ep_auth_handler := func(final_handler http.Handler) http.Handler {
-		auth_handler := ep_creds.AuthHandler(final_handler)
-		return auth_handler
-	}
-
-	basic_auth_handler := ep_auth_handler
-	strict_auth_handler := ep_auth_handler
-
 	query_redirect_opts := www.DefaultQueryRedirectHandlerOptions()
 	query_redirect_handler := www.NewQueryRedirectHandler(query_redirect_opts)
 
 	signin_complete_handler := query_redirect_handler
-
-	if *require_mfa {
-
-		common_totp_opts := credentials.DefaultTOTPCredentialsOptions()
-		common_totp_opts.SigninUrl = *mfa_signin_url
-		common_totp_opts.CookieName = *mfa_cookie_name
-		common_totp_opts.CookieTTL = *mfa_cookie_ttl
-		common_totp_opts.AccountsDatabase = accounts_db
-
-		strict_totp_opts := credentials.DefaultTOTPCredentialsOptions()
-		strict_totp_opts.CookieName = *mfa_cookie_name
-		strict_totp_opts.CookieTTL = *mfa_cookie_ttl
-		strict_totp_opts.AccountsDatabase = accounts_db
-		strict_totp_opts.SigninUrl = *mfa_signin_url
-		strict_totp_opts.Force = true
-
-		common_totp_auth, err := credentials.NewTOTPCredentials(ctx, common_totp_opts)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		strict_totp_auth, err := credentials.NewTOTPCredentials(ctx, strict_totp_opts)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		basic_auth_handler = func(final_handler http.Handler) http.Handler {
-			auth_handler := common_totp_auth.AuthHandler(final_handler)
-			return ep_auth_handler(auth_handler)
-		}
-
-		strict_auth_handler = func(final_handler http.Handler) http.Handler {
-			auth_handler := strict_totp_auth.AuthHandler(final_handler)
-			return ep_auth_handler(auth_handler)
-		}
-
-		mfa_signin_handler := strict_totp_auth.SigninHandler(auth_templates, "totp", query_redirect_handler)
-		mfa_signin_handler = ep_auth_handler(mfa_signin_handler)
-
-		mfa_redirect_handler := www.NewRedirectHandler(*mfa_signin_url)
-		signin_complete_handler = mfa_redirect_handler
-
-		mux.Handle(*mfa_signin_url, mfa_signin_handler)
-		// mux.Handle(*mfa_signup_url, mfa_signup_handler)
-	}
-
+	signin_complete_handler = mfa_creds.AuthHandler(signin_complete_handler)
+	signin_complete_handler = ep_creds.AuthHandler(signin_complete_handler)	
+	
 	signin_handler := ep_creds.SigninHandler(auth_templates, "signin", signin_complete_handler)
-	signup_handler := ep_creds.SignupHandler(auth_templates, "signup", query_redirect_handler)
+
+	mux.Handle(ep_opts.SigninURL, signin_handler)
+	
+	// signup_handler := ep_creds.SignupHandler(auth_templates, "signup", query_redirect_handler)
+	// mux.Handle(ep_opts.SignupURL, signup_handler)
+	
 	signout_handler := ep_creds.SignoutHandler(auth_templates, "signout", query_redirect_handler)
+	mux.Handle(ep_opts.SignoutURL, signout_handler)
+	
 
-	index_handler := IndexHandler(ep_creds, auth_templates, "index")
-	index_handler = basic_auth_handler(index_handler)
-
+	/*
 	pswd_handler_opts := &www.PasswordHandlerOptions{
 		Credentials:      ep_creds,
 		AccountsDatabase: accounts_db,
@@ -224,36 +171,8 @@ go run -mod vendor cmd/auth-server/main.go  -accounts-uri fs://./tmp -sessions-u
 
 	pswd_handler := www.PasswordHandler(pswd_handler_opts, auth_templates, "password")
 	pswd_handler = strict_auth_handler(pswd_handler)
-
-	mux.Handle(ep_opts.SigninURL, signin_handler)
-	mux.Handle(ep_opts.SignupURL, signup_handler)
-	mux.Handle(ep_opts.SignoutURL, signout_handler)
-
-	mux.Handle(ep_opts.RootURL, index_handler)
-	mux.Handle("/password", pswd_handler)
-
-	if *allow_tokens {
-
-		if !*require_mfa {
-			log.Fatal("Site tokens require the use of MFA tokens")
-		}
-
-		token_db, err := database.NewAccessTokensDatabase(ctx, *tokens_uri)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		token_opts := &www.SiteTokenHandlerOptions{
-			Credentials:          ep_creds,
-			AccountsDatabase:     accounts_db,
-			AccessTokensDatabase: token_db,
-		}
-
-		token_handler := www.SiteTokenHandler(token_opts)
-		mux.Handle("/token", token_handler)
-	}
-
+	*/
+	
 	s, err := server.NewServer(ctx, *server_uri)
 
 	if err != nil {
