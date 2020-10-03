@@ -4,6 +4,7 @@ import (
 	"github.com/aaronland/go-http-sanitize"
 	go_http "net/http"
 	"strings"
+	"log"
 )
 
 type QueryRedirectHandlerOptions struct {
@@ -24,6 +25,8 @@ func DefaultQueryRedirectHandlerOptions() *QueryRedirectHandlerOptions {
 func NewRedirectHandler(uri string) go_http.Handler {
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
+
+		log.Println("Redirect to ", uri)
 		go_http.Redirect(rsp, req, uri, 303)
 		return
 	}

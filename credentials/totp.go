@@ -10,8 +10,8 @@ import (
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
 	"html/template"
-	// "log"
-	go_http "net/http"
+	"log"
+	"net/http"
 	"time"
 )
 
@@ -62,18 +62,21 @@ func NewTOTPCredentials(ctx context.Context, opts *TOTPCredentialsOptions) (auth
 	return &totp_auth, nil
 }
 
-func (totp_auth *TOTPCredentials) AuthHandler(next go_http.Handler) go_http.Handler {
+func (totp_auth *TOTPCredentials) AuthHandler(next http.Handler) http.Handler {
 
-	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
+	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
+		log.Println("MFA Auth Handler")
+		
 		acct, err := totp_auth.GetAccountForRequest(req)
 
 		if err != nil {
-			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			http.Error(rsp, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		if acct == nil {
+			log.Println("MFA Is auth, go to next...")
 			next.ServeHTTP(rsp, req)
 			return
 		}
@@ -81,7 +84,7 @@ func (totp_auth *TOTPCredentials) AuthHandler(next go_http.Handler) go_http.Hand
 		mfa := acct.MFA
 
 		if mfa == nil {
-			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			http.Error(rsp, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -139,19 +142,22 @@ func (totp_auth *TOTPCredentials) AuthHandler(next go_http.Handler) go_http.Hand
 		}
 
 		if require_code {
+
+			log.Println("MFA require code, redirect to", totp_auth.options.SigninUrl)
 			redir_url := fmt.Sprintf("%s?redir=%s", totp_auth.options.SigninUrl, req.URL.Path)
-			go_http.Redirect(rsp, req, redir_url, 303)
+			http.Redirect(rsp, req, redir_url, 303)
 			return
 		}
 
+		log.Println("MFA set auth context")
 		req = auth.SetAccountContext(req, acct)
 		next.ServeHTTP(rsp, req)
 	}
 
-	return go_http.HandlerFunc(fn)
+	return http.HandlerFunc(fn)
 }
 
-func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_name string, next http.Handler) http.Handler {
 
 	type TOTPVars struct {
 		PageTitle string
@@ -160,31 +166,31 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 		Error     error
 	}
 
-	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
+	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
 		acct, err := auth.GetAccountContext(req)
 
 		if err != nil {
-			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			http.Error(rsp, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		if acct == nil {
-			go_http.Error(rsp, "No user", go_http.StatusInternalServerError)
+			http.Error(rsp, "No user", http.StatusInternalServerError)
 			return
 		}
 
 		mfa := acct.MFA
 
 		if mfa == nil {
-			go_http.Error(rsp, "MFA not configured", go_http.StatusInternalServerError)
+			http.Error(rsp, "MFA not configured", http.StatusInternalServerError)
 			return
 		}
 
 		secret, err := mfa.GetSecret()
 
 		if err != nil {
-			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			http.Error(rsp, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -208,7 +214,7 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 			err := templates.ExecuteTemplate(rsp, t_name, vars)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -219,7 +225,7 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 			str_code, err := sanitize.PostString(req, "code")
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
+				http.Error(rsp, err.Error(), http.StatusBadRequest)
 				return
 			}
 
@@ -233,7 +239,7 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 				err := templates.ExecuteTemplate(rsp, t_name, vars)
 
 				if err != nil {
-					go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+					http.Error(rsp, err.Error(), http.StatusInternalServerError)
 					return
 				}
 
@@ -252,51 +258,51 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 			acct, err = accounts_db.UpdateAccount(acct)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
 			expires := ts + totp_auth.options.CookieTTL
 			t_expires := time.Unix(expires, 0)
 
-			ck := &go_http.Cookie{
+			ck := &http.Cookie{
 				Name:     totp_auth.options.CookieName,
 				Value:    "mfa",
 				Secure:   true,
-				SameSite: go_http.SameSiteLaxMode,
+				SameSite: http.SameSiteLaxMode,
 				Expires:  t_expires,
 				// Domain:
 				// Path:
 			}
 
 			if ck.String() == "" {
-				go_http.Error(rsp, "Invalid cookie", go_http.StatusInternalServerError)
+				http.Error(rsp, "Invalid cookie", http.StatusInternalServerError)
 				return
 			}
 
-			go_http.SetCookie(rsp, ck)
+			http.SetCookie(rsp, ck)
 
 			req = auth.SetAccountContext(req, acct)
 			next.ServeHTTP(rsp, req)
 			return
 
 		default:
-			go_http.Error(rsp, "Unsupported method", go_http.StatusMethodNotAllowed)
+			http.Error(rsp, "Unsupported method", http.StatusMethodNotAllowed)
 			return
 		}
 	}
 
-	return go_http.HandlerFunc(fn)
+	return http.HandlerFunc(fn)
 }
 
-func (totp_auth *TOTPCredentials) SignupHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func (totp_auth *TOTPCredentials) SignupHandler(templates *template.Template, t_name string, next http.Handler) http.Handler {
 	return auth.NotImplementedHandler()
 }
 
-func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t_name string, next http.Handler) http.Handler {
 	return auth.NotImplementedHandler()
 }
 
-func (totp_auth *TOTPCredentials) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
+func (totp_auth *TOTPCredentials) GetAccountForRequest(req *http.Request) (*account.Account, error) {
 	return auth.GetAccountContext(req)
 }

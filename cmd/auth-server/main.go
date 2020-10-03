@@ -126,6 +126,26 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	/*
+
+> make debug
+go run -mod vendor cmd/auth-server/main.go  -accounts-uri fs://./tmp -sessions-uri fs://./tmp debug -crumb-uri debug
+2020/10/02 17:03:14 Listening for requests on http://localhost:8080
+2020/10/02 17:03:17 EP sign in URL
+2020/10/02 17:03:17 EP is auth true <nil>
+2020/10/02 17:03:17 EP is auth, go to next 0x13daaf0
+2020/10/02 17:03:17 Redirect to  /mfa
+2020/10/02 17:03:17 EP Auth handler
+2020/10/02 17:03:17 EP set account context
+2020/10/02 17:03:17 EP go to next 0x13d0d00
+2020/10/02 17:03:17 MFA Auth Handler
+2020/10/02 17:03:17 MFA require code, redirect to /mfa
+2020/10/02 17:03:17 EP Auth handler
+2020/10/02 17:03:17 EP set account context
+2020/10/02 17:03:17 EP go to next 0x13d1180
+
+	*/
+	
 	// at this point the order of the handlers is relevant which is unfortunate
 	// but there you go... because MFA is optional (20190710/thisisaaronland)
 

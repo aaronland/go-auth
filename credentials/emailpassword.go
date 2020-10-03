@@ -10,7 +10,8 @@ import (
 	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-sanitize"
 	"html/template"
-	go_http "net/http"
+	"log"
+	"net/http"
 	"time"
 )
 
@@ -71,34 +72,41 @@ func NewEmailPasswordCredentials(ctx context.Context, opts *EmailPasswordCredent
 	return &ep_auth, nil
 }
 
-func (ep_auth *EmailPasswordCredentials) AppendCredentialsHandler(prev go_http.Handler) go_http.Handler {
+func (ep_auth *EmailPasswordCredentials) AppendCredentialsHandler(prev http.Handler) http.Handler {
 	return auth.NotImplementedHandler()
 }
 
-func (ep_auth *EmailPasswordCredentials) AuthHandler(next go_http.Handler) go_http.Handler {
+func (ep_auth *EmailPasswordCredentials) AuthHandler(next http.Handler) http.Handler {
 
-	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
+	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
+		log.Println("EP Auth handler")
+		
 		acct, err := ep_auth.GetAccountForRequest(req)
 
 		if err != nil {
-			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			http.Error(rsp, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		if acct == nil {
-			go_http.Redirect(rsp, req, ep_auth.options.SigninURL, 303)
+
+			log.Println("EP no account, redirect to", ep_auth.options.SigninURL)
+			http.Redirect(rsp, req, ep_auth.options.SigninURL, 303)
 			return
 		}
 
+		log.Println("EP set account context")
 		req = auth.SetAccountContext(req, acct)
+
+		log.Println("EP go to next", next)
 		next.ServeHTTP(rsp, req)
 	}
 
-	return go_http.HandlerFunc(fn)
+	return http.HandlerFunc(fn)
 }
 
-func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Template, t_name string, next http.Handler) http.Handler {
 
 	type SigninVars struct {
 		PageTitle string
@@ -107,16 +115,22 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 		Error     error
 	}
 
-	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
+	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
+		log.Println("EP sign in URL")
+		
 		ok, err := auth.IsAuthenticated(ep_auth, req)
 
 		if err != nil {
-			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			http.Error(rsp, err.Error(), http.StatusInternalServerError)
 		}
 
+		log.Println("EP is auth", ok, err)
+		
 		if ok {
-			// go_http.Redirect(rsp, req, ep_auth.options.RootURL, 303) // check for ?redir=
+
+			log.Println("EP is auth, go to next", next)
+			// http.Redirect(rsp, req, ep_auth.options.RootURL, 303) // check for ?redir=
 			next.ServeHTTP(rsp, req)
 			return
 		}
@@ -136,7 +150,7 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 			err := templates.ExecuteTemplate(rsp, t_name, vars)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -147,14 +161,14 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 			str_email, err := sanitize.PostString(req, "email")
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
+				http.Error(rsp, err.Error(), http.StatusBadRequest)
 				return
 			}
 
 			str_password, err := sanitize.PostString(req, "password")
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
+				http.Error(rsp, err.Error(), http.StatusBadRequest)
 				return
 			}
 
@@ -163,33 +177,33 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 			acct, err := acct_db.GetAccountByEmailAddress(str_email)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
 			if !acct.IsActive() {
-				go_http.Error(rsp, "Invalid user", go_http.StatusBadRequest)
+				http.Error(rsp, "Invalid user", http.StatusBadRequest)
 				return
 			}
 
 			p, err := acct.GetPassword()
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
 			err = p.Compare(str_password)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
 			err = ep_auth.SetAccountForResponse(rsp, acct)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -199,17 +213,17 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 			return
 
 		default:
-			go_http.Error(rsp, "Unsupported method", go_http.StatusMethodNotAllowed)
+			http.Error(rsp, "Unsupported method", http.StatusMethodNotAllowed)
 			return
 		}
 	}
 
-	signin_handler := go_http.HandlerFunc(fn)
+	signin_handler := http.HandlerFunc(fn)
 
 	return crumb.EnsureCrumbHandler(ep_auth.options.Crumb, signin_handler)
 }
 
-func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Template, t_name string, next http.Handler) http.Handler {
 
 	type SignupVars struct {
 		PageTitle string
@@ -218,12 +232,12 @@ func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Templ
 		Error     error
 	}
 
-	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
+	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
 		ok, err := auth.IsAuthenticated(ep_auth, req)
 
 		if err != nil {
-			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			http.Error(rsp, err.Error(), http.StatusInternalServerError)
 		}
 
 		if ok {
@@ -246,7 +260,7 @@ func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Templ
 			err := templates.ExecuteTemplate(rsp, t_name, vars)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -257,28 +271,28 @@ func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Templ
 			str_email, err := sanitize.PostString(req, "email")
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
+				http.Error(rsp, err.Error(), http.StatusBadRequest)
 				return
 			}
 
 			str_username, err := sanitize.PostString(req, "username")
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
+				http.Error(rsp, err.Error(), http.StatusBadRequest)
 				return
 			}
 
 			str_password, err := sanitize.PostString(req, "password")
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
+				http.Error(rsp, err.Error(), http.StatusBadRequest)
 				return
 			}
 
 			acct, err := account.NewAccount(str_email, str_password, str_username)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -287,14 +301,14 @@ func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Templ
 			acct, err = acct_db.AddAccount(acct)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
 			err = ep_auth.SetAccountForResponse(rsp, acct)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -302,17 +316,17 @@ func (ep_auth *EmailPasswordCredentials) SignupHandler(templates *template.Templ
 			return
 
 		default:
-			go_http.Error(rsp, "Unsupported method", go_http.StatusMethodNotAllowed)
+			http.Error(rsp, "Unsupported method", http.StatusMethodNotAllowed)
 			return
 		}
 	}
 
-	signup_handler := go_http.HandlerFunc(fn)
+	signup_handler := http.HandlerFunc(fn)
 
 	return crumb.EnsureCrumbHandler(ep_auth.options.Crumb, signup_handler)
 }
 
-func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Template, t_name string, next go_http.Handler) go_http.Handler {
+func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Template, t_name string, next http.Handler) http.Handler {
 
 	type SignoutVars struct {
 		PageTitle  string
@@ -320,12 +334,12 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 		SignoutURL string
 	}
 
-	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
+	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
 		ok, err := auth.IsAuthenticated(ep_auth, req)
 
 		if err != nil {
-			go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+			http.Error(rsp, err.Error(), http.StatusInternalServerError)
 		}
 
 		if !ok {
@@ -347,7 +361,7 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 			err := templates.ExecuteTemplate(rsp, t_name, vars)
 
 			if err != nil {
-				go_http.Error(rsp, err.Error(), go_http.StatusInternalServerError)
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -355,29 +369,29 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 
 		case "POST":
 
-			ck := go_http.Cookie{
+			ck := http.Cookie{
 				Name:   ep_auth.options.SessionCookieName,
 				Value:  "",
 				MaxAge: -1,
 			}
 
-			go_http.SetCookie(rsp, &ck)
+			http.SetCookie(rsp, &ck)
 
 			next.ServeHTTP(rsp, req)
 			return
 
 		default:
-			go_http.Error(rsp, "Unsupported method", go_http.StatusMethodNotAllowed)
+			http.Error(rsp, "Unsupported method", http.StatusMethodNotAllowed)
 			return
 		}
 	}
 
-	signout_handler := go_http.HandlerFunc(fn)
+	signout_handler := http.HandlerFunc(fn)
 
 	return crumb.EnsureCrumbHandler(ep_auth.options.Crumb, signout_handler)
 }
 
-func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Request) (*account.Account, error) {
+func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *http.Request) (*account.Account, error) {
 
 	ctx := req.Context()
 
@@ -385,7 +399,7 @@ func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Reque
 
 	if err != nil {
 
-		if err == go_http.ErrNoCookie {
+		if err == http.ErrNoCookie {
 			return nil, nil
 		}
 
@@ -422,7 +436,7 @@ func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *go_http.Reque
 	return acct, nil
 }
 
-func (ep_auth *EmailPasswordCredentials) SetAccountForResponse(rsp go_http.ResponseWriter, acct *account.Account) error {
+func (ep_auth *EmailPasswordCredentials) SetAccountForResponse(rsp http.ResponseWriter, acct *account.Account) error {
 
 	ctx := context.Background()
 
@@ -444,11 +458,11 @@ func (ep_auth *EmailPasswordCredentials) SetAccountForResponse(rsp go_http.Respo
 
 	t_expires := time.Unix(sess.Expires, 0)
 
-	ck := &go_http.Cookie{
+	ck := &http.Cookie{
 		Name:     ep_auth.options.SessionCookieName,
 		Value:    sess.SessionId,
 		Secure:   true,
-		SameSite: go_http.SameSiteLaxMode,
+		SameSite: http.SameSiteLaxMode,
 		Expires:  t_expires,
 		// Domain:
 		// Path:
@@ -458,6 +472,6 @@ func (ep_auth *EmailPasswordCredentials) SetAccountForResponse(rsp go_http.Respo
 		return errors.New("Invalid cookie")
 	}
 
-	go_http.SetCookie(rsp, ck)
+	http.SetCookie(rsp, ck)
 	return nil
 }
