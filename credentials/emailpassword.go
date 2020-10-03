@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/aaronland/go-auth"
 	"github.com/aaronland/go-auth/account"
+	"github.com/aaronland/go-auth/cookie"
 	"github.com/aaronland/go-auth/database"
 	"github.com/aaronland/go-auth/session"
 	"github.com/aaronland/go-http-crumb"
@@ -16,26 +17,23 @@ import (
 )
 
 type EmailPasswordCredentialsOptions struct {
-	RootURL           string
-	SigninURL         string
-	SignupURL         string
-	SignoutURL        string
-	SessionCookieName string
-	SessionCookieTTL  int64
-	Crumb             crumb.Crumb
-	AccountsDatabase  database.AccountsDatabase
-	SessionsDatabase  database.SessionsDatabase
+	RootURL             string
+	SigninURL           string
+	SignupURL           string
+	SignoutURL          string
+	SessionCookieConfig *cookie.Config
+	Crumb               crumb.Crumb
+	AccountsDatabase    database.AccountsDatabase
+	SessionsDatabase    database.SessionsDatabase
 }
 
 func DefaultEmailPasswordCredentialsOptions() *EmailPasswordCredentialsOptions {
 
 	opts := EmailPasswordCredentialsOptions{
-		RootURL:           "/",
-		SigninURL:         "/signin",
-		SignupURL:         "/signup",
-		SignoutURL:        "/signout",
-		SessionCookieName: "s",
-		SessionCookieTTL:  3600,
+		RootURL:    "/",
+		SigninURL:  "/signin",
+		SignupURL:  "/signup",
+		SignoutURL: "/signout",
 	}
 
 	return &opts
@@ -56,12 +54,12 @@ func NewEmailPasswordCredentials(ctx context.Context, opts *EmailPasswordCredent
 		return nil, errors.New("Missing sessions database")
 	}
 
-	if opts.SessionCookieName == "" {
-		return nil, errors.New("Invalid session cookie name")
+	if opts.SessionCookieConfig == nil {
+		return nil, errors.New("Missing session cookie config")
 	}
 
-	if opts.SessionCookieTTL <= 0 {
-		return nil, errors.New("Invalid session cookie TTL")
+	if opts.SessionCookieConfig.TTL == nil {
+		return nil, errors.New("Missing session cookie TTL")
 	}
 
 	ep_auth := EmailPasswordCredentials{
@@ -370,7 +368,7 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 		case "POST":
 
 			ck := http.Cookie{
-				Name:   ep_auth.options.SessionCookieName,
+				Name:   ep_auth.options.SessionCookieConfig.Name,
 				Value:  "",
 				MaxAge: -1,
 			}
@@ -395,7 +393,7 @@ func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *http.Request)
 
 	ctx := req.Context()
 
-	ck, err := req.Cookie(ep_auth.options.SessionCookieName)
+	ck, err := req.Cookie(ep_auth.options.SessionCookieConfig.Name)
 
 	if err != nil {
 
@@ -440,9 +438,21 @@ func (ep_auth *EmailPasswordCredentials) SetAccountForResponse(rsp http.Response
 
 	ctx := context.Background()
 
+	ttl := ep_auth.options.SessionCookieConfig.TTL
+
+	if ttl == nil {
+		return errors.New("Invalid cookie TTL")
+	}
+
+	now := time.Now()
+	then := ttl.Shift(now)
+
+	diff := then.Sub(now)
+	session_ttl := int64(diff.Seconds())
+
 	sessions_db := ep_auth.options.SessionsDatabase
 
-	sess, err := database.NewSessionRecord(ctx, sessions_db, ep_auth.options.SessionCookieTTL)
+	sess, err := database.NewSessionRecord(ctx, sessions_db, session_ttl)
 
 	if err != nil {
 		return err
@@ -456,20 +466,10 @@ func (ep_auth *EmailPasswordCredentials) SetAccountForResponse(rsp http.Response
 		return err
 	}
 
-	t_expires := time.Unix(sess.Expires, 0)
+	ck, err := ep_auth.options.SessionCookieConfig.NewCookie(ctx, sess.SessionId)
 
-	ck := &http.Cookie{
-		Name:     ep_auth.options.SessionCookieName,
-		Value:    sess.SessionId,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-		Expires:  t_expires,
-		// Domain:
-		// Path:
-	}
-
-	if ck.String() == "" {
-		return errors.New("Invalid cookie")
+	if err != nil {
+		return err
 	}
 
 	http.SetCookie(rsp, ck)

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"github.com/aaronland/go-auth"
 	"github.com/aaronland/go-auth/account"
+	"github.com/aaronland/go-auth/cookie"
 	"github.com/aaronland/go-auth/credentials"
 	"github.com/aaronland/go-auth/database"
 	_ "github.com/aaronland/go-auth/database/fs"
@@ -59,10 +60,8 @@ func main() {
 
 	crumb_uri := flag.String("crumb-uri", "debug", "...")
 
-	session_cookie_name := flag.String("session-cookie-name", "s", "...")
-	session_cookie_ttl := flag.Int64("session-cookie-ttl", 3600, "...")
+	session_cookie_uri := flag.String("session-cookie-uri", "", "...")
 
-	// require_mfa := flag.Bool("mfa", true, "...")
 	mfa_signin_url := flag.String("mfa-signin-url", "/mfa", "...")
 
 	mfa_cookie_name := flag.String("mfa-cookie-name", "m", "...")
@@ -110,12 +109,21 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if *session_cookie_uri == "" {
+		log.Fatal("Missing -session-cookie-uri parameter")
+	}
+
+	session_cfg, err := cookie.NewConfig(ctx, *session_cookie_uri)
+
+	if err != nil {
+		log.Fatalf("Invalid -session-cookie-uri parameter, %v", err)
+	}
+
 	ep_opts := credentials.DefaultEmailPasswordCredentialsOptions()
 
 	ep_opts.AccountsDatabase = accounts_db
 	ep_opts.SessionsDatabase = sessions_db
-	ep_opts.SessionCookieName = *session_cookie_name
-	ep_opts.SessionCookieTTL = *session_cookie_ttl
+	ep_opts.SessionCookieConfig = session_cfg
 	ep_opts.Crumb = cr
 
 	ep_creds, err := credentials.NewEmailPasswordCredentials(ctx, ep_opts)

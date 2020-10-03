@@ -53,6 +53,8 @@ github.com/patrickmn/go-hmaccrypt
 github.com/pquerna/otp
 github.com/pquerna/otp/hotp
 github.com/pquerna/otp/totp
+# github.com/senseyeio/duration v0.0.0-20180430131211-7c2a214ada46
+github.com/senseyeio/duration
 # github.com/tidwall/gjson v1.3.5
 github.com/tidwall/gjson
 # github.com/tidwall/match v1.0.1
