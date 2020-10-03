@@ -219,7 +219,8 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 	}
 
 	signin_handler := http.HandlerFunc(fn)
-
+	//return signin_handler
+	
 	return crumb.EnsureCrumbHandler(ep_auth.options.Crumb, signin_handler)
 }
 

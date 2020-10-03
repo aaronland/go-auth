@@ -7,11 +7,9 @@ github.com/aaronland/go-artisanal-integers-proxy
 github.com/aaronland/go-artisanal-integers-proxy/service
 # github.com/aaronland/go-brooklynintegers-api v1.2.1
 github.com/aaronland/go-brooklynintegers-api
-# github.com/aaronland/go-http-cookie v0.3.3
-github.com/aaronland/go-http-cookie
-# github.com/aaronland/go-http-crumb v0.1.1
+# github.com/aaronland/go-http-crumb v0.1.2
 github.com/aaronland/go-http-crumb
-# github.com/aaronland/go-http-rewrite v0.0.5
+# github.com/aaronland/go-http-rewrite v0.0.6
 github.com/aaronland/go-http-rewrite
 # github.com/aaronland/go-http-sanitize v0.0.4
 github.com/aaronland/go-http-sanitize
@@ -28,19 +26,12 @@ github.com/aaronland/go-password/cli
 github.com/aaronland/go-pool
 # github.com/aaronland/go-roster v0.0.2
 github.com/aaronland/go-roster
-# github.com/aaronland/go-secretbox v0.3.0
-github.com/aaronland/go-secretbox
 # github.com/aaronland/go-string v0.1.2
 github.com/aaronland/go-string/random
 # github.com/aaronland/go-ucd v0.0.0-20190520134908-684059ca9156
 github.com/aaronland/go-ucd
 # github.com/aaronland/go-ucd-username v0.1.0
 github.com/aaronland/go-ucd-username
-# github.com/awnumar/memcall v0.0.0-20191004114545-73db50fd9f80
-github.com/awnumar/memcall
-# github.com/awnumar/memguard v0.22.2
-github.com/awnumar/memguard
-github.com/awnumar/memguard/core
 # github.com/aws/aws-lambda-go v1.10.0
 github.com/aws/aws-lambda-go/events
 github.com/aws/aws-lambda-go/lambda
@@ -81,19 +72,12 @@ go.uber.org/ratelimit
 go.uber.org/ratelimit/internal/clock
 # golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 golang.org/x/crypto/bcrypt
-golang.org/x/crypto/blake2b
 golang.org/x/crypto/blowfish
-golang.org/x/crypto/internal/subtle
-golang.org/x/crypto/nacl/secretbox
-golang.org/x/crypto/pbkdf2
-golang.org/x/crypto/poly1305
-golang.org/x/crypto/salsa20/salsa
-golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20200930145003-4acb6c075d10
+# golang.org/x/net v0.0.0-20201002202402-0a1ea396d57c
 golang.org/x/net/html
 golang.org/x/net/html/atom
-# golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd
-golang.org/x/sys/cpu
+# golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
