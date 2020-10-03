@@ -11,7 +11,7 @@ github.com/aaronland/go-brooklynintegers-api
 github.com/aaronland/go-http-cookie
 # github.com/aaronland/go-http-crumb v0.0.5
 github.com/aaronland/go-http-crumb
-# github.com/aaronland/go-http-rewrite v0.0.5
+# github.com/aaronland/go-http-rewrite v0.0.6
 github.com/aaronland/go-http-rewrite
 # github.com/aaronland/go-http-sanitize v0.0.4
 github.com/aaronland/go-http-sanitize
@@ -75,10 +75,11 @@ golang.org/x/crypto/poly1305
 golang.org/x/crypto/salsa20/salsa
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20200930145003-4acb6c075d10
+# golang.org/x/net v0.0.0-20201002202402-0a1ea396d57c
 golang.org/x/net/html
 golang.org/x/net/html/atom
-# golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd
+# golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
 golang.org/x/sys/cpu
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
