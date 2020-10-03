@@ -60,12 +60,10 @@ func main() {
 
 	crumb_uri := flag.String("crumb-uri", "debug", "...")
 
-	session_cookie_uri := flag.String("session-cookie-uri", "", "...")
+	session_cookie_uri := flag.String("session-cookie-uri", "http://localhost:8080/?name=s&ttl=PT8H", "...")
+	mfa_cookie_uri := flag.String("mfa-cookie-uri", "http://localhost:8080/?name=m&ttl=PT1H", "...")
 
 	mfa_signin_url := flag.String("mfa-signin-url", "/mfa", "...")
-
-	mfa_cookie_name := flag.String("mfa-cookie-name", "m", "...")
-	mfa_cookie_ttl := flag.Int64("mfa-cookie-ttl", 3600, "...")
 
 	// allow_tokens := flag.Bool("tokens", false, "...")
 	// tokens_uri := flag.String("tokens-uri", "", "...")
@@ -113,7 +111,17 @@ func main() {
 		log.Fatal("Missing -session-cookie-uri parameter")
 	}
 
-	session_cfg, err := cookie.NewConfig(ctx, *session_cookie_uri)
+	session_cookie_cfg, err := cookie.NewConfig(ctx, *session_cookie_uri)
+
+	if err != nil {
+		log.Fatalf("Invalid -session-cookie-uri parameter, %v", err)
+	}
+
+	if *mfa_cookie_uri == "" {
+		log.Fatal("Missing -session-cookie-uri parameter")
+	}
+
+	mfa_cookie_cfg, err := cookie.NewConfig(ctx, *mfa_cookie_uri)
 
 	if err != nil {
 		log.Fatalf("Invalid -session-cookie-uri parameter, %v", err)
@@ -123,7 +131,7 @@ func main() {
 
 	ep_opts.AccountsDatabase = accounts_db
 	ep_opts.SessionsDatabase = sessions_db
-	ep_opts.SessionCookieConfig = session_cfg
+	ep_opts.SessionCookieConfig = session_cookie_cfg
 	ep_opts.Crumb = cr
 
 	ep_creds, err := credentials.NewEmailPasswordCredentials(ctx, ep_opts)
@@ -134,9 +142,9 @@ func main() {
 
 	mfa_opts := credentials.DefaultTOTPCredentialsOptions()
 	mfa_opts.SigninUrl = *mfa_signin_url
-	mfa_opts.CookieName = *mfa_cookie_name
-	mfa_opts.CookieTTL = *mfa_cookie_ttl
+	mfa_opts.TOTPCookieConfig = mfa_cookie_cfg
 	mfa_opts.AccountsDatabase = accounts_db
+	mfa_opts.Crumb = cr
 
 	mfa_creds, err := credentials.NewTOTPCredentials(ctx, mfa_opts)
 
@@ -156,7 +164,7 @@ func main() {
 	query_redirect_handler := www.NewQueryRedirectHandler(query_redirect_opts)
 
 	signin_handler := ep_creds.SigninHandler(auth_templates, "signin", query_redirect_handler)
-	signin_handler = mfa_creds.AuthHandler(signin_handler)
+	// signin_handler = mfa_creds.AuthHandler(signin_handler)
 	// signin_handler = ep_creds.AuthHandler(signin_handler)
 
 	mux.Handle(ep_opts.SigninURL, signin_handler)

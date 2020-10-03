@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"github.com/aaronland/go-auth"
 	"github.com/aaronland/go-auth/account"
+	"github.com/aaronland/go-auth/cookie"
 	"github.com/aaronland/go-auth/database"
+	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-sanitize"
 	"github.com/pquerna/otp/totp"
 	"html/template"
@@ -18,19 +20,16 @@ import (
 type TOTPCredentialsOptions struct {
 	Force            bool
 	SigninUrl        string
-	CookieURI        string
-	CookieName       string
-	CookieTTL        int64 // please make this a time.Duration
+	TOTPCookieConfig *cookie.Config
 	AccountsDatabase database.AccountsDatabase
+	Crumb            crumb.Crumb
 }
 
 func DefaultTOTPCredentialsOptions() *TOTPCredentialsOptions {
 
 	opts := TOTPCredentialsOptions{
-		Force:      false,
-		SigninUrl:  "/mfa",
-		CookieName: "m",
-		CookieTTL:  3600,
+		Force:     false,
+		SigninUrl: "/mfa",
 	}
 
 	return &opts
@@ -47,12 +46,16 @@ func NewTOTPCredentials(ctx context.Context, opts *TOTPCredentialsOptions) (auth
 		return nil, errors.New("Missing accounts database")
 	}
 
-	if opts.CookieName == "" {
-		return nil, errors.New("Invalid cookie name")
+	if opts.TOTPCookieConfig == nil {
+		return nil, errors.New("Missing session cookie config")
 	}
 
-	if opts.CookieTTL <= 0 {
-		return nil, errors.New("Invalid cookie TTL")
+	if opts.TOTPCookieConfig.TTL == nil {
+		return nil, errors.New("Missing session cookie TTL")
+	}
+
+	if opts.Crumb == nil {
+		return nil, errors.New("Missing crumb")
 	}
 
 	totp_auth := TOTPCredentials{
@@ -76,8 +79,9 @@ func (totp_auth *TOTPCredentials) AuthHandler(next http.Handler) http.Handler {
 		}
 
 		if acct == nil {
-			log.Println("MFA Is auth, go to next...")
-			next.ServeHTTP(rsp, req)
+
+			log.Println("MFA missing account, go to signin")
+			http.Redirect(rsp, req, "/signin", 303)
 			return
 		}
 
@@ -90,56 +94,13 @@ func (totp_auth *TOTPCredentials) AuthHandler(next http.Handler) http.Handler {
 
 		require_code := true
 
-		totp_cookie, err := req.Cookie(totp_auth.options.CookieName)
+		totp_cookie, err := req.Cookie(totp_auth.options.TOTPCookieConfig.Name)
 
 		if totp_cookie != nil {
-
 			require_code = false
-
-			/*
-						/*
-						// check to see if we've already auth-ed on this page
-						// in the last (n) seconds
-
-						if totp_auth.options.Force {
-
-							cookie_str := ck.Value
-
-				cookie_parts := strings.Split(cookie_str, ":")
-
-				if len(cookie_parts) != 2 {
-					return false, errors.New("Invalid cookie string")
-				}
-
-				cookie_url := cookie_parts[1]
-
-				if cookie_url != req.URL.Path {
-					return false, nil
-				}
-
-							ok, _ := totp_auth.isRequestCookie(req, totp_cookie)
-
-							if ok {
-								require_code = false
-							}
-						}
-
-					} else {
-
-						_, err := totp_cookie.Get(req)
-
-						if err == nil {
-
-						now := time.Now()
-						diff := now.Unix() - mfa.LastAuth
-
-						if diff < totp_auth.options.TTL {
-							require_code = false
-						}
-					}
-				}
-			*/
 		}
+
+		log.Println("MFA require code", require_code, totp_cookie, err)
 
 		if require_code {
 
@@ -167,6 +128,8 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 	}
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
+
+		log.Println("MFA sign in handler")
 
 		acct, err := auth.GetAccountContext(req)
 
@@ -262,21 +225,11 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 				return
 			}
 
-			expires := ts + totp_auth.options.CookieTTL
-			t_expires := time.Unix(expires, 0)
+			ctx := req.Context()
+			ck, err := totp_auth.options.TOTPCookieConfig.NewCookie(ctx, "mfa")
 
-			ck := &http.Cookie{
-				Name:     totp_auth.options.CookieName,
-				Value:    "mfa",
-				Secure:   true,
-				SameSite: http.SameSiteLaxMode,
-				Expires:  t_expires,
-				// Domain:
-				// Path:
-			}
-
-			if ck.String() == "" {
-				http.Error(rsp, "Invalid cookie", http.StatusInternalServerError)
+			if err != nil {
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -292,7 +245,9 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 		}
 	}
 
-	return http.HandlerFunc(fn)
+	signin_handler := http.HandlerFunc(fn)
+
+	return crumb.EnsureCrumbHandler(totp_auth.options.Crumb, signin_handler)
 }
 
 func (totp_auth *TOTPCredentials) SignupHandler(templates *template.Template, t_name string, next http.Handler) http.Handler {
