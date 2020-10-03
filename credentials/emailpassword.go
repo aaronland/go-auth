@@ -439,11 +439,11 @@ func (ep_auth *EmailPasswordCredentials) setAuthCookie(rsp go_http.ResponseWrite
 	cookie_str := fmt.Sprintf("%d:%s", acct.ID, p.Digest()) // WRAP THIS IN A FUNCTION
 
 	raw_cookie := &go_http.Cookie{
-		Value:  cookie_str,
-		Secure: true,
+		Value:    cookie_str,
+		Secure:   true,
 		SameSite: go_http.SameSiteLaxMode,
-		Path: "/",
+		Path:     "/",
 	}
-	
+
 	return ck.SetCookie(rsp, raw_cookie)
 }
