@@ -147,11 +147,9 @@ func main() {
 	query_redirect_opts := www.DefaultQueryRedirectHandlerOptions()
 	query_redirect_handler := www.NewQueryRedirectHandler(query_redirect_opts)
 
-	signin_complete_handler := query_redirect_handler
-	signin_complete_handler = mfa_creds.AuthHandler(signin_complete_handler)
-	signin_complete_handler = ep_creds.AuthHandler(signin_complete_handler)	
-	
-	signin_handler := ep_creds.SigninHandler(auth_templates, "signin", signin_complete_handler)
+	signin_handler := ep_creds.SigninHandler(auth_templates, "signin", query_redirect_handler)
+	signin_handler = mfa_creds.AuthHandler(signin_handler)
+	// signin_handler = ep_creds.AuthHandler(signin_handler)	
 
 	mux.Handle(ep_opts.SigninURL, signin_handler)
 	
@@ -159,9 +157,15 @@ func main() {
 	// mux.Handle(ep_opts.SignupURL, signup_handler)
 	
 	signout_handler := ep_creds.SignoutHandler(auth_templates, "signout", query_redirect_handler)
+	// STUFF HERE
 	mux.Handle(ep_opts.SignoutURL, signout_handler)
 	
+	mfa_handler := mfa_creds.SigninHandler(auth_templates, "totp", query_redirect_handler)
+	//mfa_handler = mfa_creds.AuthHandler(mfa_handler)
+	mfa_handler = ep_creds.AuthHandler(mfa_handler)	
 
+	mux.Handle("/mfa", mfa_handler)
+	
 	/*
 	pswd_handler_opts := &www.PasswordHandlerOptions{
 		Credentials:      ep_creds,
