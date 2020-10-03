@@ -442,6 +442,7 @@ func (ep_auth *EmailPasswordCredentials) setAuthCookie(rsp go_http.ResponseWrite
 		Value:  cookie_str,
 		Secure: true,
 		SameSite: go_http.SameSiteLaxMode,
+		Path: "/",
 	}
 	
 	return ck.SetCookie(rsp, raw_cookie)

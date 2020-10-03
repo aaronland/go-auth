@@ -299,6 +299,7 @@ func (totp_auth *TOTPCredentials) setTOTPCookie(rsp go_http.ResponseWriter, req 
 		MaxAge: 300,
 		Secure: true,
 		SameSite: go_http.SameSiteLaxMode,
+		Path: "/",		
 	}
 
 	return totp_cookie.SetCookie(rsp, raw_cookie)
