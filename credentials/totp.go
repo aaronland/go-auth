@@ -11,6 +11,7 @@ import (
 	"github.com/aaronland/go-auth/session"
 	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-sanitize"
+	"github.com/sfomuseum/logger"	
 	"github.com/pquerna/otp/totp"
 	"html/template"
 	"log"
@@ -25,6 +26,7 @@ type TOTPCredentialsOptions struct {
 	AccountsDatabase database.AccountsDatabase
 	SessionsDatabase database.SessionsDatabase
 	Crumb            crumb.Crumb
+	Logger	*logger.Logger
 }
 
 func DefaultTOTPCredentialsOptions() *TOTPCredentialsOptions {
@@ -75,7 +77,7 @@ func (totp_auth *TOTPCredentials) AuthHandler(next http.Handler) http.Handler {
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		log.Println("MFA Auth Handler")
+		totp_auth.log("MFA Auth Handler")
 
 		acct, err := totp_auth.GetAccountForRequest(req)
 
@@ -85,7 +87,7 @@ func (totp_auth *TOTPCredentials) AuthHandler(next http.Handler) http.Handler {
 		}
 
 		if acct == nil {
-			log.Println("MFA missing account, go to signin")
+			totp_auth.log("MFA missing account, go to signin")
 			http.Redirect(rsp, req, "/signin", 303)
 			return
 		}
@@ -116,13 +118,13 @@ func (totp_auth *TOTPCredentials) AuthHandler(next http.Handler) http.Handler {
 		}
 
 		if require_code {
-			log.Println("MFA require code, redirect to", totp_auth.options.SigninUrl)
+			totp_auth.log("MFA require code, redirect to", totp_auth.options.SigninUrl)
 			redir_url := fmt.Sprintf("%s?redir=%s", totp_auth.options.SigninUrl, req.URL.Path)
 			http.Redirect(rsp, req, redir_url, 303)
 			return
 		}
 
-		log.Println("MFA set auth context")
+		totp_auth.log("MFA set auth context")
 		req = auth.SetAccountContext(req, acct)
 		next.ServeHTTP(rsp, req)
 	}
@@ -141,7 +143,7 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		log.Println("MFA sign in handler")
+		totp_auth.log("MFA sign in handler")
 
 		acct, err := auth.GetAccountContext(req)
 
@@ -151,7 +153,7 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 		}
 
 		if acct == nil {
-			http.Error(rsp, "No user", http.StatusInternalServerError)
+			http.Redirect(rsp, req, "/signin", 303)
 			return
 		}
 
@@ -304,4 +306,14 @@ func (totp_auth *TOTPCredentials) SetAccountForResponse(rsp http.ResponseWriter,
 
 	http.SetCookie(rsp, ck)
 	return nil
+}
+
+func (totp_auth *TOTPCredentials) log(msg string, args ...interface{}) {
+
+	if totp_auth.options.Logger != nil {
+		totp_auth.options.Logger.Printf(msg, args...)
+		return 
+	}
+
+	log.Printf(msg, args...)
 }

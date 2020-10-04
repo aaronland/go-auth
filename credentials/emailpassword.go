@@ -10,6 +10,7 @@ import (
 	"github.com/aaronland/go-auth/session"
 	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-sanitize"
+	"github.com/sfomuseum/logger"	
 	"html/template"
 	"log"
 	"net/http"
@@ -25,6 +26,7 @@ type EmailPasswordCredentialsOptions struct {
 	Crumb               crumb.Crumb
 	AccountsDatabase    database.AccountsDatabase
 	SessionsDatabase    database.SessionsDatabase
+	Logger	*logger.Logger
 }
 
 func DefaultEmailPasswordCredentialsOptions() *EmailPasswordCredentialsOptions {
@@ -77,7 +79,7 @@ func (ep_auth *EmailPasswordCredentials) AuthHandler(next http.Handler) http.Han
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		log.Println("EP Auth handler")
+		ep_auth.log("EP Auth handler")
 
 		acct, err := ep_auth.GetAccountForRequest(req)
 
@@ -88,15 +90,15 @@ func (ep_auth *EmailPasswordCredentials) AuthHandler(next http.Handler) http.Han
 
 		if acct == nil {
 
-			log.Println("EP no account, redirect to", ep_auth.options.SigninURL)
+			ep_auth.log("EP no account, redirect to", ep_auth.options.SigninURL)
 			http.Redirect(rsp, req, ep_auth.options.SigninURL, 303)
 			return
 		}
 
-		log.Println("EP set account context")
+		ep_auth.log("EP set account context")
 		req = auth.SetAccountContext(req, acct)
 
-		log.Println("EP go to next", next)
+		ep_auth.log("EP go to next", next)
 		next.ServeHTTP(rsp, req)
 	}
 
@@ -114,7 +116,7 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		log.Println("EP sign in URL")
+		ep_auth.log("EP sign in URL")
 
 		ok, err := auth.IsAuthenticated(ep_auth, req)
 
@@ -122,11 +124,11 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 			http.Error(rsp, err.Error(), http.StatusInternalServerError)
 		}
 
-		log.Println("EP is auth", ok, err)
+		ep_auth.log("EP is auth", ok, err)
 
 		if ok {
 
-			log.Println("EP is auth, go to next", next)
+			ep_auth.log("EP is auth, go to next", next)
 			// http.Redirect(rsp, req, ep_auth.options.RootURL, 303) // check for ?redir=
 			next.ServeHTTP(rsp, req)
 			return
@@ -474,4 +476,14 @@ func (ep_auth *EmailPasswordCredentials) SetAccountForResponse(rsp http.Response
 
 	http.SetCookie(rsp, ck)
 	return nil
+}
+
+func (ep_auth *EmailPasswordCredentials) log(msg string, args ...interface{}) {
+
+	if ep_auth.options.Logger != nil {
+		ep_auth.options.Logger.Printf(msg, args...)
+		return 
+	}
+
+	log.Printf(msg, args...)
 }
