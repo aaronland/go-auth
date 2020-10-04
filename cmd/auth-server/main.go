@@ -12,6 +12,7 @@ import (
 	"github.com/aaronland/go-auth/www"
 	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-server"
+	"github.com/sfomuseum/logger"
 	"html/template"
 	"log"
 	"net/http"
@@ -155,31 +156,37 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	log_handler := logger.New(logger.Options{
+		RemoteAddressHeaders: []string{"X-Real-IP", "X-Forwarded-For"},
+	})
+	
 	index_handler := IndexHandler(ep_creds, auth_templates, "index")
 	index_handler = mfa_creds.AuthHandler(index_handler)
 	index_handler = ep_creds.AuthHandler(index_handler)
-
+	index_handler = log_handler.Handler(index_handler)
+	
 	mux.Handle("/", index_handler)
 
 	query_redirect_opts := www.DefaultQueryRedirectHandlerOptions()
 	query_redirect_handler := www.NewQueryRedirectHandler(query_redirect_opts)
 
 	signin_handler := ep_creds.SigninHandler(auth_templates, "signin", query_redirect_handler)
-	// signin_handler = mfa_creds.AuthHandler(signin_handler)
-	// signin_handler = ep_creds.AuthHandler(signin_handler)
-
+	signin_handler = log_handler.Handler(signin_handler)
+	
 	mux.Handle(ep_opts.SigninURL, signin_handler)
 
-	// signup_handler := ep_creds.SignupHandler(auth_templates, "signup", query_redirect_handler)
-	// mux.Handle(ep_opts.SignupURL, signup_handler)
+	signup_handler := ep_creds.SignupHandler(auth_templates, "signup", query_redirect_handler)
+	signup_handler = log_handler.Handler(signup_handler)
+	
+	mux.Handle(ep_opts.SignupURL, signup_handler)
 
 	signout_handler := ep_creds.SignoutHandler(auth_templates, "signout", query_redirect_handler)
-	// STUFF HERE
+	signout_handler = log_handler.Handler(signout_handler)
+	
 	mux.Handle(ep_opts.SignoutURL, signout_handler)
 
 	mfa_handler := mfa_creds.SigninHandler(auth_templates, "totp", query_redirect_handler)
-	//mfa_handler = mfa_creds.AuthHandler(mfa_handler)
-	mfa_handler = ep_creds.AuthHandler(mfa_handler)
+	mfa_handler = log_handler.Handler(mfa_handler)	
 
 	mux.Handle("/mfa", mfa_handler)
 
