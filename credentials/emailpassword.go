@@ -411,6 +411,7 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 			ep_auth.log("EP signout handler remove cookie, %s", ep_auth.options.SessionCookieConfig.Name)
 			http.SetCookie(rsp, &ck)
 
+			ep_auth.log("EP signout handler go to next, %v", next)			
 			next.ServeHTTP(rsp, req)
 			return
 

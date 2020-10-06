@@ -38,7 +38,7 @@ func NewQueryRedirectHandler(opts *QueryRedirectHandlerOptions) go_http.Handler 
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
-		log.Println("Query redirect")
+		log.Printf("Query redirect %s\n", req.URL.Path)
 
 		redir, err := sanitize.RequestString(req, opts.RedirectParameter)
 
