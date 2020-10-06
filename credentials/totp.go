@@ -11,8 +11,8 @@ import (
 	"github.com/aaronland/go-auth/session"
 	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-sanitize"
-	"github.com/sfomuseum/logger"	
 	"github.com/pquerna/otp/totp"
+	"github.com/sfomuseum/logger"
 	"html/template"
 	"log"
 	"net/http"
@@ -26,7 +26,7 @@ type TOTPCredentialsOptions struct {
 	AccountsDatabase database.AccountsDatabase
 	SessionsDatabase database.SessionsDatabase
 	Crumb            crumb.Crumb
-	Logger	*logger.Logger
+	Logger           *logger.Logger
 }
 
 func DefaultTOTPCredentialsOptions() *TOTPCredentialsOptions {
@@ -267,7 +267,47 @@ func (totp_auth *TOTPCredentials) SignupHandler(templates *template.Template, t_
 }
 
 func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t_name string, next http.Handler) http.Handler {
-	return auth.NotImplementedHandler()
+
+	fn := func(rsp http.ResponseWriter, req *http.Request) {
+
+		totp_auth.log("MFA Signout Handler %s", req.URL.Path)
+
+		acct, err := totp_auth.GetAccountForRequest(req)
+
+		if err != nil {
+			http.Error(rsp, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if acct == nil {
+			totp_auth.log("No account, go to /signout")
+			http.Redirect(rsp, req, "/signout", 303)
+			return
+		}
+
+		totp_cookie, err := req.Cookie(totp_auth.options.TOTPCookieConfig.Name)
+
+		totp_auth.log("MFA signout cookie %v (%s)", totp_cookie, totp_auth.options.TOTPCookieConfig.Name)
+
+		if totp_cookie != nil {
+
+			ck := http.Cookie{
+				Name:   totp_auth.options.TOTPCookieConfig.Name,
+				Value:  "",
+				MaxAge: -1,
+			}
+
+			totp_auth.log("MFA signout cookie remove")
+			http.SetCookie(rsp, &ck)
+		}
+
+		next.ServeHTTP(rsp, req)
+	}
+
+	// crumb?
+
+	signout_handler := http.HandlerFunc(fn)
+	return signout_handler
 }
 
 func (totp_auth *TOTPCredentials) GetAccountForRequest(req *http.Request) (*account.Account, error) {
@@ -312,7 +352,7 @@ func (totp_auth *TOTPCredentials) log(msg string, args ...interface{}) {
 
 	if totp_auth.options.Logger != nil {
 		totp_auth.options.Logger.Printf(msg, args...)
-		return 
+		return
 	}
 
 	log.Printf(msg, args...)

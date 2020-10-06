@@ -129,19 +129,19 @@ func main() {
 	}
 
 	www_logger := logger.New(logger.Options{
-		Prefix: "auth-server",
+		Prefix:               "auth-server",
 		RemoteAddressHeaders: []string{"X-Real-IP", "X-Forwarded-For"},
-		OutputFlags: log.LstdFlags,
-		IgnoredRequestURIs: []string{"/favicon.ico"},
+		OutputFlags:          log.LstdFlags,
+		IgnoredRequestURIs:   []string{"/favicon.ico"},
 	})
-	
+
 	ep_opts := credentials.DefaultEmailPasswordCredentialsOptions()
 
 	ep_opts.AccountsDatabase = accounts_db
 	ep_opts.SessionsDatabase = sessions_db
 	ep_opts.SessionCookieConfig = session_cookie_cfg
 	ep_opts.Logger = www_logger
-	
+
 	ep_opts.Crumb = cr
 
 	ep_creds, err := credentials.NewEmailPasswordCredentials(ctx, ep_opts)
@@ -156,7 +156,7 @@ func main() {
 	mfa_opts.AccountsDatabase = accounts_db
 	mfa_opts.SessionsDatabase = sessions_db
 	mfa_opts.Logger = www_logger
-	
+
 	mfa_opts.Crumb = cr
 
 	mfa_creds, err := credentials.NewTOTPCredentials(ctx, mfa_opts)
@@ -166,38 +166,40 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	
+
 	index_handler := IndexHandler(ep_creds, auth_templates, "index")
 	index_handler = mfa_creds.AuthHandler(index_handler)
 	index_handler = ep_creds.AuthHandler(index_handler)
 	index_handler = www_logger.Handler(index_handler)
-	
+
 	mux.Handle("/", index_handler)
 
 	query_redirect_opts := www.DefaultQueryRedirectHandlerOptions()
 	query_redirect_handler := www.NewQueryRedirectHandler(query_redirect_opts)
 	query_redirect_handler = www_logger.Handler(query_redirect_handler)
-	
+
 	signin_handler := ep_creds.SigninHandler(auth_templates, "signin", query_redirect_handler)
 	signin_handler = www_logger.Handler(signin_handler)
-	
+
 	mux.Handle(ep_opts.SigninURL, signin_handler)
 
 	signup_handler := ep_creds.SignupHandler(auth_templates, "signup", query_redirect_handler)
 	signup_handler = www_logger.Handler(signup_handler)
-	
+
 	mux.Handle(ep_opts.SignupURL, signup_handler)
 
-	signout_handler := ep_creds.SignoutHandler(auth_templates, "signout", query_redirect_handler)
+	mfa_signout_handler := mfa_creds.SignoutHandler(auth_templates, "totp_signout", query_redirect_handler)
+
+	signout_handler := ep_creds.SignoutHandler(auth_templates, "signout", mfa_signout_handler)
 	signout_handler = mfa_creds.AuthHandler(signout_handler)
-	signout_handler = ep_creds.AuthHandler(signout_handler)	
+	signout_handler = ep_creds.AuthHandler(signout_handler)
 	signout_handler = www_logger.Handler(signout_handler)
-	
+
 	mux.Handle(ep_opts.SignoutURL, signout_handler)
 
 	mfa_handler := mfa_creds.SigninHandler(auth_templates, "totp", query_redirect_handler)
-	mfa_handler = ep_creds.AuthHandler(mfa_handler)	
-	mfa_handler = www_logger.Handler(mfa_handler)	
+	mfa_handler = ep_creds.AuthHandler(mfa_handler)
+	mfa_handler = www_logger.Handler(mfa_handler)
 
 	mux.Handle("/mfa", mfa_handler)
 

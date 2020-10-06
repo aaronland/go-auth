@@ -10,7 +10,7 @@ import (
 	"github.com/aaronland/go-auth/session"
 	"github.com/aaronland/go-http-crumb"
 	"github.com/aaronland/go-http-sanitize"
-	"github.com/sfomuseum/logger"	
+	"github.com/sfomuseum/logger"
 	"html/template"
 	"log"
 	"net/http"
@@ -26,7 +26,7 @@ type EmailPasswordCredentialsOptions struct {
 	Crumb               crumb.Crumb
 	AccountsDatabase    database.AccountsDatabase
 	SessionsDatabase    database.SessionsDatabase
-	Logger	*logger.Logger
+	Logger              *logger.Logger
 }
 
 func DefaultEmailPasswordCredentialsOptions() *EmailPasswordCredentialsOptions {
@@ -335,13 +335,19 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
+		ep_auth.log("EP signout handler %s", req.URL.Path)
+
 		ok, err := auth.IsAuthenticated(ep_auth, req)
+
+		ep_auth.log("EP signout handler is auth %v, %v", ok, err)
 
 		if err != nil {
 			http.Error(rsp, err.Error(), http.StatusInternalServerError)
 		}
 
 		if !ok {
+
+			ep_auth.log("EP signout handler not auth, go to next")
 			next.ServeHTTP(rsp, req)
 			return
 		}
@@ -354,6 +360,8 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 		switch req.Method {
 
 		case "GET":
+
+			ep_auth.log("EP signout handler GET")
 
 			rsp.Header().Set("Content-type", "text/html")
 
@@ -368,12 +376,39 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 
 		case "POST":
 
+			ep_auth.log("EP signout handler POST")
+
 			ck := http.Cookie{
 				Name:   ep_auth.options.SessionCookieConfig.Name,
 				Value:  "",
 				MaxAge: -1,
 			}
 
+			// FIX ME: COOKIE IS NOT BEING REMOVED?
+
+			/*
+
+			[auth-server] 2020/10/06 09:44:16 EP Auth handler get account /signout
+			[auth-server] 2020/10/06 09:44:16 EP Auth handler get account cookie s, s=***
+			[auth-server] 2020/10/06 09:44:16 EP Auth handler get account return ACCT
+			[auth-server] 2020/10/06 09:44:16 EP signout handler is auth true, <nil>
+			[auth-server] 2020/10/06 09:44:16 EP signout handler POST
+			[auth-server] 2020/10/06 09:44:16 EP signout handler remove cookie, s
+			[auth-server] 2020/10/06 09:44:16 MFA Signout Handler /signout
+			[auth-server] 2020/10/06 09:44:16 MFA signout cookie m=***
+			[auth-server] 2020/10/06 09:44:16 MFA signout cookie remove
+			2020/10/06 09:44:16 Query redirect
+			2020/10/06 09:44:16 Redirect to /
+			[auth-server] 2020/10/06 09:44:16 (127.0.0.1:50869) "POST /signout HTTP/1.1" 303 0 44.973µs
+			[auth-server] 2020/10/06 09:44:16 (127.0.0.1:50869) "POST /signout HTTP/1.1" 303 0 845.694µs
+			[auth-server] 2020/10/06 09:44:16 EP Auth handler /
+			[auth-server] 2020/10/06 09:44:16 EP Auth handler get account /
+			[auth-server] 2020/10/06 09:44:16 EP Auth handler get account cookie s, s=***
+			[auth-server] 2020/10/06 09:44:16 EP Auth handler get account return ACCT
+
+			*/
+
+			ep_auth.log("EP signout handler remove cookie, %s", ep_auth.options.SessionCookieConfig.Name)
 			http.SetCookie(rsp, &ck)
 
 			next.ServeHTTP(rsp, req)
@@ -392,9 +427,13 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 
 func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *http.Request) (*account.Account, error) {
 
+	ep_auth.log("EP Auth handler get account %s", req.URL.Path)
+
 	ctx := req.Context()
 
 	ck, err := req.Cookie(ep_auth.options.SessionCookieConfig.Name)
+
+	ep_auth.log("EP Auth handler get account cookie %v, %v", ep_auth.options.SessionCookieConfig.Name, ck)
 
 	if err != nil {
 
@@ -432,6 +471,7 @@ func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *http.Request)
 		return nil, errors.New("User is not active")
 	}
 
+	ep_auth.log("EP Auth handler get account return %s", "ACCT")
 	return acct, nil
 }
 
@@ -481,7 +521,7 @@ func (ep_auth *EmailPasswordCredentials) log(msg string, args ...interface{}) {
 
 	if ep_auth.options.Logger != nil {
 		ep_auth.options.Logger.Printf(msg, args...)
-		return 
+		return
 	}
 
 	log.Printf(msg, args...)

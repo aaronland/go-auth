@@ -1,6 +1,14 @@
 {{ define "index" }}
 {{ template "header" }}
 
+<nav style="text-align:right;">
+    {{ if .Account }}
+    <a href="/signout">sign out</a>
+    {{ else }}
+    <a href="/signin">sign in</a>
+    {{ end }}
+</nav>
+
 {{ if .Account }}
 Hello, {{ .Account.Username.Raw }}
 {{ else }}
