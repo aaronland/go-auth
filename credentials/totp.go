@@ -77,7 +77,7 @@ func (totp_auth *TOTPCredentials) AuthHandler(next http.Handler) http.Handler {
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		totp_auth.log("MFA Auth Handler")
+		totp_auth.log("MFA Auth Handler %s", req.URL.Path)
 
 		acct, err := totp_auth.GetAccountForRequest(req)
 
@@ -143,7 +143,7 @@ func (totp_auth *TOTPCredentials) SigninHandler(templates *template.Template, t_
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		totp_auth.log("MFA sign in handler")
+		totp_auth.log("MFA sign in handler %s", req.URL.Path)
 
 		acct, err := auth.GetAccountContext(req)
 

@@ -79,7 +79,7 @@ func (ep_auth *EmailPasswordCredentials) AuthHandler(next http.Handler) http.Han
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		ep_auth.log("EP Auth handler")
+		ep_auth.log("EP Auth handler %s", req.URL.Path)
 
 		acct, err := ep_auth.GetAccountForRequest(req)
 
@@ -90,7 +90,7 @@ func (ep_auth *EmailPasswordCredentials) AuthHandler(next http.Handler) http.Han
 
 		if acct == nil {
 
-			ep_auth.log("EP no account, redirect to", ep_auth.options.SigninURL)
+			ep_auth.log("EP no account, redirect to %s", ep_auth.options.SigninURL)
 			http.Redirect(rsp, req, ep_auth.options.SigninURL, 303)
 			return
 		}
@@ -116,7 +116,7 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		ep_auth.log("EP sign in URL")
+		ep_auth.log("EP sign in URL %s", req.URL.Path)
 
 		ok, err := auth.IsAuthenticated(ep_auth, req)
 
@@ -124,12 +124,11 @@ func (ep_auth *EmailPasswordCredentials) SigninHandler(templates *template.Templ
 			http.Error(rsp, err.Error(), http.StatusInternalServerError)
 		}
 
-		ep_auth.log("EP is auth", ok, err)
+		ep_auth.log("EP is auth: %v, %v", ok, err)
 
 		if ok {
 
-			ep_auth.log("EP is auth, go to next", next)
-			// http.Redirect(rsp, req, ep_auth.options.RootURL, 303) // check for ?redir=
+			ep_auth.log("EP is auth, go to next %v", next)
 			next.ServeHTTP(rsp, req)
 			return
 		}

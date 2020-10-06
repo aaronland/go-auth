@@ -179,8 +179,6 @@ func main() {
 	query_redirect_handler = www_logger.Handler(query_redirect_handler)
 	
 	signin_handler := ep_creds.SigninHandler(auth_templates, "signin", query_redirect_handler)
-	signin_handler = mfa_creds.AuthHandler(signin_handler)
-	signin_handler = ep_creds.AuthHandler(signin_handler)	
 	signin_handler = www_logger.Handler(signin_handler)
 	
 	mux.Handle(ep_opts.SigninURL, signin_handler)
@@ -191,12 +189,13 @@ func main() {
 	mux.Handle(ep_opts.SignupURL, signup_handler)
 
 	signout_handler := ep_creds.SignoutHandler(auth_templates, "signout", query_redirect_handler)
+	signout_handler = mfa_creds.AuthHandler(signout_handler)
+	signout_handler = ep_creds.AuthHandler(signout_handler)	
 	signout_handler = www_logger.Handler(signout_handler)
 	
 	mux.Handle(ep_opts.SignoutURL, signout_handler)
 
 	mfa_handler := mfa_creds.SigninHandler(auth_templates, "totp", query_redirect_handler)
-	mfa_handler = mfa_creds.AuthHandler(mfa_handler)
 	mfa_handler = ep_creds.AuthHandler(mfa_handler)	
 	mfa_handler = www_logger.Handler(mfa_handler)	
 
