@@ -103,6 +103,8 @@ func (totp_auth *TOTPCredentials) AuthHandler(next http.Handler) http.Handler {
 
 		totp_cookie, err := req.Cookie(totp_auth.options.TOTPCookieConfig.Name)
 
+		totp_auth.log("MFA cookie %v", totp_cookie)
+		
 		if totp_cookie != nil {
 
 			sessions_db := totp_auth.options.SessionsDatabase
@@ -118,7 +120,7 @@ func (totp_auth *TOTPCredentials) AuthHandler(next http.Handler) http.Handler {
 		}
 
 		if require_code {
-			totp_auth.log("MFA require code, redirect to", totp_auth.options.SigninUrl)
+			totp_auth.log("MFA require code, redirect to '%s'", totp_auth.options.SigninUrl)
 			redir_url := fmt.Sprintf("%s?redir=%s", totp_auth.options.SigninUrl, req.URL.Path)
 			http.Redirect(rsp, req, redir_url, 303)
 			return
@@ -291,6 +293,8 @@ func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t
 
 		if totp_cookie != nil {
 
+			totp_auth.log("MFA WTF HEADER %s", rsp.Header())
+			
 			ck := http.Cookie{
 				Name:   totp_auth.options.TOTPCookieConfig.Name,
 				Value:  "",
@@ -300,8 +304,8 @@ func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t
 			totp_auth.log("MFA signout cookie remove")
 			http.SetCookie(rsp, &ck)
 
-			// FIX ME: WHY WHY WHY???
-			
+			totp_auth.log("MFA WTF HEADER 2 %s", rsp.Header())
+
 			ck2 := http.Cookie{
 				Name:   "s",
 				Value:  "",

@@ -5,7 +5,8 @@ import (
 	"log"
 	go_http "net/http"
 	"strings"
-	"github.com/sfomuseum/logger"	
+	"github.com/sfomuseum/logger"
+	"os"
 )
 
 type QueryRedirectHandlerOptions struct {
@@ -41,25 +42,31 @@ func NewQueryRedirectHandler(opts *QueryRedirectHandlerOptions) go_http.Handler 
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
-		log.Printf("Query redirect handler %s (%s)", req.URL.Path, req.Method)
+		opts.Logger.Printf("Query redirect handler %s (%s)", req.URL.Path, req.Method)
+		opts.Logger.Printf("QUERY REDIRECT HEADER %s", rsp.Header())
 
+		rsp.Header().Write(os.Stderr)
+		
 		redir, err := sanitize.RequestString(req, opts.RedirectParameter)
 
 		if err != nil {
+			opts.Logger.Printf("WTF 1")
 			go_http.Error(rsp, err.Error(), go_http.StatusBadRequest)
 			return
 		}
 
 		if redir == "" {
+			opts.Logger.Printf("WTF 2")
 			redir = opts.RootURL
 		}
 
 		if !strings.HasPrefix(redir, "/") {
+			opts.Logger.Printf("WTF 3")			
 			go_http.Error(rsp, "Unsupported redirect", go_http.StatusBadRequest)
 			return
 		}
 
-		log.Printf("Query redirect to %s (%s)", redir, req.Method)
+		opts.Logger.Printf("Query redirect to %s (%s)", redir, req.Method)
 		
 		go_http.Redirect(rsp, req, redir, 303)
 		return

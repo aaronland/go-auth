@@ -100,6 +100,7 @@ func (cfg *Config) NewCookie(ctx context.Context, value string) (*http.Cookie, e
 		Value:    value,
 		Secure:   cfg.Secure,
 		SameSite: cfg.SameSite,
+		HttpOnly: true,
 	}
 
 	if cfg.TTL != nil {
