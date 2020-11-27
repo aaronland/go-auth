@@ -294,26 +294,32 @@ func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t
 		if totp_cookie != nil {
 
 			totp_auth.log("MFA WTF HEADER %s", rsp.Header())
-			
-			ck := http.Cookie{
+
+			/*
+			ck := &http.Cookie{
 				Name:   totp_auth.options.TOTPCookieConfig.Name,
-				Value:  "",
+				Value:  "m",
 				MaxAge: -1,
 			}
+			*/
 
+			ctx := req.Context()
+			ck, err := totp_auth.options.TOTPCookieConfig.NewCookie(ctx, "")
+			
+			if err != nil {
+				http.Error(rsp, err.Error(), http.StatusInternalServerError)
+			}
+
+			now := time.Now()
+			then := now. AddDate(0, -1, -1)
+			
+			ck.Expires = then
+			ck.MaxAge = int(then.Unix())
+			
 			totp_auth.log("MFA signout cookie remove")
-			http.SetCookie(rsp, &ck)
+			http.SetCookie(rsp, ck)
 
 			totp_auth.log("MFA WTF HEADER 2 %s", rsp.Header())
-
-			ck2 := http.Cookie{
-				Name:   "s",
-				Value:  "",
-				MaxAge: -1,
-			}
-
-			http.SetCookie(rsp, &ck2)
-			
 		}
 
 		next.ServeHTTP(rsp, req)

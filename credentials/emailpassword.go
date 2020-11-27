@@ -380,7 +380,7 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 			ep_auth.log("EP signout handler POST")
 
 			ctx := req.Context()
-			ck, err := ep_auth.options.SessionCookieConfig.NewCookie(ctx, "spork")
+			ck, err := ep_auth.options.SessionCookieConfig.NewCookie(ctx, "")
 			
 			if err != nil {
 				http.Error(rsp, err.Error(), http.StatusInternalServerError)
@@ -391,15 +391,6 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 			
 			ck.Expires = then
 			ck.MaxAge = int(then.Unix())
-
-			/*
-			ck := &http.Cookie{
-				Name: ep_auth.options.SessionCookieConfig.Name,
-				Path: "/",
-				Domain: "localhost",
-				MaxAge: -1,
-			}
-			*/
 			
 			ep_auth.log("EP signout handler remove cookie '%s'", ep_auth.options.SessionCookieConfig.Name)
 			http.SetCookie(rsp, ck)
