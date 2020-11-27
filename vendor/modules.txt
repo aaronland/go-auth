@@ -49,7 +49,7 @@ github.com/cooperhewitt/go-ucd/unicodedata
 github.com/cooperhewitt/go-ucd/unihan
 # github.com/patrickmn/go-hmaccrypt v0.0.0-20150313143312-a45a9e4beb6c
 github.com/patrickmn/go-hmaccrypt
-# github.com/pquerna/otp v1.2.0
+# github.com/pquerna/otp v1.3.0
 github.com/pquerna/otp
 github.com/pquerna/otp/hotp
 github.com/pquerna/otp/totp
@@ -78,7 +78,7 @@ go.uber.org/ratelimit/internal/clock
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20201002202402-0a1ea396d57c
+# golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 golang.org/x/net/html
 golang.org/x/net/html/atom
 # golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
