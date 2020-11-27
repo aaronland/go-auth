@@ -5,11 +5,13 @@ import (
 	"log"
 	go_http "net/http"
 	"strings"
+	"github.com/sfomuseum/logger"	
 )
 
 type QueryRedirectHandlerOptions struct {
 	RootURL           string
 	RedirectParameter string
+	Logger *logger.Logger
 }
 
 func DefaultQueryRedirectHandlerOptions() *QueryRedirectHandlerOptions {
@@ -26,7 +28,8 @@ func NewRedirectHandler(uri string) go_http.Handler {
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
-		log.Println("Redirect to ", uri)
+		log.Printf("Redirect to %s (%s)", uri, req.Method)
+		
 		go_http.Redirect(rsp, req, uri, 303)
 		return
 	}
@@ -38,7 +41,7 @@ func NewQueryRedirectHandler(opts *QueryRedirectHandlerOptions) go_http.Handler 
 
 	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
 
-		log.Printf("Query redirect %s\n", req.URL.Path)
+		log.Printf("Query redirect handler %s (%s)", req.URL.Path, req.Method)
 
 		redir, err := sanitize.RequestString(req, opts.RedirectParameter)
 
@@ -56,7 +59,8 @@ func NewQueryRedirectHandler(opts *QueryRedirectHandlerOptions) go_http.Handler 
 			return
 		}
 
-		log.Println("Redirect to", redir)
+		log.Printf("Query redirect to %s (%s)", redir, req.Method)
+		
 		go_http.Redirect(rsp, req, redir, 303)
 		return
 	}

@@ -175,6 +175,8 @@ func main() {
 	mux.Handle("/", index_handler)
 
 	query_redirect_opts := www.DefaultQueryRedirectHandlerOptions()
+	query_redirect_opts.Logger = www_logger
+	
 	query_redirect_handler := www.NewQueryRedirectHandler(query_redirect_opts)
 	query_redirect_handler = www_logger.Handler(query_redirect_handler)
 

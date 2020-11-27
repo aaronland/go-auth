@@ -270,7 +270,7 @@ func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		totp_auth.log("MFA Signout Handler %s", req.URL.Path)
+		totp_auth.log("MFA Signout Handler %s (%s)", req.URL.Path, req.Method)
 
 		acct, err := totp_auth.GetAccountForRequest(req)
 
@@ -299,6 +299,17 @@ func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t
 
 			totp_auth.log("MFA signout cookie remove")
 			http.SetCookie(rsp, &ck)
+
+			// FIX ME: WHY WHY WHY???
+			
+			ck2 := http.Cookie{
+				Name:   "s",
+				Value:  "",
+				MaxAge: -1,
+			}
+
+			http.SetCookie(rsp, &ck2)
+			
 		}
 
 		next.ServeHTTP(rsp, req)

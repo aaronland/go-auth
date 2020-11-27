@@ -79,7 +79,7 @@ func (ep_auth *EmailPasswordCredentials) AuthHandler(next http.Handler) http.Han
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		ep_auth.log("EP Auth handler %s", req.URL.Path)
+		ep_auth.log("EP Auth handler %s (%s)", req.URL.Path, req.Method)
 
 		acct, err := ep_auth.GetAccountForRequest(req)
 
@@ -98,7 +98,7 @@ func (ep_auth *EmailPasswordCredentials) AuthHandler(next http.Handler) http.Han
 		ep_auth.log("EP set account context")
 		req = auth.SetAccountContext(req, acct)
 
-		ep_auth.log("EP go to next", next)
+		ep_auth.log("EP go to next %v", next)
 		next.ServeHTTP(rsp, req)
 	}
 
@@ -335,7 +335,7 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		ep_auth.log("EP signout handler %s", req.URL.Path)
+		ep_auth.log("EP signout handler %s (%s)", req.URL.Path, req.Method)
 
 		ok, err := auth.IsAuthenticated(ep_auth, req)
 
@@ -386,29 +386,7 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 
 			// FIX ME: COOKIE IS NOT BEING REMOVED?
 
-			/*
-
-			[auth-server] 2020/10/06 09:44:16 EP Auth handler get account /signout
-			[auth-server] 2020/10/06 09:44:16 EP Auth handler get account cookie s, s=***
-			[auth-server] 2020/10/06 09:44:16 EP Auth handler get account return ACCT
-			[auth-server] 2020/10/06 09:44:16 EP signout handler is auth true, <nil>
-			[auth-server] 2020/10/06 09:44:16 EP signout handler POST
-			[auth-server] 2020/10/06 09:44:16 EP signout handler remove cookie, s
-			[auth-server] 2020/10/06 09:44:16 MFA Signout Handler /signout
-			[auth-server] 2020/10/06 09:44:16 MFA signout cookie m=***
-			[auth-server] 2020/10/06 09:44:16 MFA signout cookie remove
-			2020/10/06 09:44:16 Query redirect
-			2020/10/06 09:44:16 Redirect to /
-			[auth-server] 2020/10/06 09:44:16 (127.0.0.1:50869) "POST /signout HTTP/1.1" 303 0 44.973µs
-			[auth-server] 2020/10/06 09:44:16 (127.0.0.1:50869) "POST /signout HTTP/1.1" 303 0 845.694µs
-			[auth-server] 2020/10/06 09:44:16 EP Auth handler /
-			[auth-server] 2020/10/06 09:44:16 EP Auth handler get account /
-			[auth-server] 2020/10/06 09:44:16 EP Auth handler get account cookie s, s=***
-			[auth-server] 2020/10/06 09:44:16 EP Auth handler get account return ACCT
-
-			*/
-
-			ep_auth.log("EP signout handler remove cookie, %s", ep_auth.options.SessionCookieConfig.Name)
+			ep_auth.log("EP signout handler remove cookie '%s'", ep_auth.options.SessionCookieConfig.Name)
 			http.SetCookie(rsp, &ck)
 
 			ep_auth.log("EP signout handler go to next, %v", next)			
