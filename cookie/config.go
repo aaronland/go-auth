@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/senseyeio/duration"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -130,5 +131,11 @@ func (cfg *Config) NewCookie(ctx context.Context, value string) (*http.Cookie, e
 		return nil, errors.New("Invalid cookie")
 	}
 
+	ck = &http.Cookie{
+		Name:     cfg.Name,
+		Value:    value,
+	}
+
+	log.Println("NEW COOKIE", ck.String())
 	return ck, nil
 }

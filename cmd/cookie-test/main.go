@@ -113,12 +113,16 @@ func IndexHandler() http.Handler {
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
+		rsp.Header().Set("Content-type", "text/html")
+
 		c1, err1 := req.Cookie("c1")
 		c2, err2 := req.Cookie("c2")
 
-		fmt.Fprintf(rsp, "C1 '%s' %v\n", c1.String(), err1)
-		fmt.Fprintf(rsp, "C2 '%s' %v\n", c2.String(), err2)		
+		fmt.Fprintf(rsp, "C1 '%s' %v <br />", c1.String(), err1)
+		fmt.Fprintf(rsp, "C2 '%s' %v <br />", c2.String(), err2)		
 
+
+		rsp.Write([]byte(`<form method="POST" action="/remove"><button type="submit">remove</button></form>`))
 		return
 	}
 

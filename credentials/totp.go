@@ -293,10 +293,10 @@ func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t
 
 		if totp_cookie != nil {
 
-			now := time.Now()
-			then := now.AddDate(0, -1, -1)
+			// now := time.Now()
+			// then := now.AddDate(0, -1, -1)
 
-			totp_cookie.Expires = then
+			// totp_cookie.Expires = then
 			totp_cookie.MaxAge = -1
 			totp_cookie.Value = ""
 

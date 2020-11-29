@@ -382,10 +382,10 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 
 			if ck != nil {
 
-				now := time.Now()
-				then := now.AddDate(0, -1, -1)
+				// now := time.Now()
+				// then := now.AddDate(0, -1, -1)
 
-				ck.Expires = then
+				// ck.Expires = then
 				ck.MaxAge = -1
 				ck.Value = ""
 
