@@ -104,7 +104,7 @@ func (totp_auth *TOTPCredentials) AuthHandler(next http.Handler) http.Handler {
 		totp_cookie, err := req.Cookie(totp_auth.options.TOTPCookieConfig.Name)
 
 		totp_auth.log("MFA cookie %v", totp_cookie)
-		
+
 		if totp_cookie != nil {
 
 			sessions_db := totp_auth.options.SessionsDatabase
@@ -293,33 +293,17 @@ func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t
 
 		if totp_cookie != nil {
 
-			totp_auth.log("MFA WTF HEADER %s", rsp.Header())
-
-			/*
-			ck := &http.Cookie{
-				Name:   totp_auth.options.TOTPCookieConfig.Name,
-				Value:  "m",
-				MaxAge: -1,
-			}
-			*/
-
-			ctx := req.Context()
-			ck, err := totp_auth.options.TOTPCookieConfig.NewCookie(ctx, "")
-			
-			if err != nil {
-				http.Error(rsp, err.Error(), http.StatusInternalServerError)
-			}
-
 			now := time.Now()
-			then := now. AddDate(0, -1, -1)
-			
-			ck.Expires = then
-			ck.MaxAge = int(then.Unix())
-			
-			totp_auth.log("MFA signout cookie remove")
-			http.SetCookie(rsp, ck)
+			then := now.AddDate(0, -1, -1)
 
-			totp_auth.log("MFA WTF HEADER 2 %s", rsp.Header())
+			totp_cookie.Expires = then
+			totp_cookie.MaxAge = -1
+			totp_cookie.Value = ""
+
+			totp_auth.log("MFA REMOVE cookie")
+			http.SetCookie(rsp, totp_cookie)
+
+			// rsp.Header().Add("Set-Cookie", totp_cookie.String())
 		}
 
 		next.ServeHTTP(rsp, req)

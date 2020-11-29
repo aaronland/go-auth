@@ -357,7 +357,6 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 			SignoutURL: ep_auth.options.SignoutURL,
 		}
 
-		
 		switch req.Method {
 
 		case "GET":
@@ -379,23 +378,24 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 
 			ep_auth.log("EP signout handler POST")
 
-			ctx := req.Context()
-			ck, err := ep_auth.options.SessionCookieConfig.NewCookie(ctx, "")
-			
-			if err != nil {
-				http.Error(rsp, err.Error(), http.StatusInternalServerError)
+			ck, _ := req.Cookie(ep_auth.options.SessionCookieConfig.Name)
+
+			if ck != nil {
+
+				now := time.Now()
+				then := now.AddDate(0, -1, -1)
+
+				ck.Expires = then
+				ck.MaxAge = -1
+				ck.Value = ""
+
+				ep_auth.log("EP REMOVE cookie '%s'", ep_auth.options.SessionCookieConfig.Name)
+				http.SetCookie(rsp, ck)
+
+				// rsp.Header().Add("Set-Cookie", ck.String())
 			}
 
-			now := time.Now()
-			then := now. AddDate(0, -1, -1)
-			
-			ck.Expires = then
-			ck.MaxAge = int(then.Unix())
-			
-			ep_auth.log("EP signout handler remove cookie '%s'", ep_auth.options.SessionCookieConfig.Name)
-			http.SetCookie(rsp, ck)
-
-			ep_auth.log("EP signout handler go to next, %v", next)			
+			ep_auth.log("EP signout handler go to next, %v", next)
 			next.ServeHTTP(rsp, req)
 			return
 
@@ -413,7 +413,7 @@ func (ep_auth *EmailPasswordCredentials) SignoutHandler(templates *template.Temp
 func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *http.Request) (*account.Account, error) {
 
 	ep_auth.log("EP Auth handler get account %s (%s)", req.URL.Path, req.Method)
-	
+
 	ctx := req.Context()
 
 	ck, err := req.Cookie(ep_auth.options.SessionCookieConfig.Name)
@@ -428,7 +428,7 @@ func (ep_auth *EmailPasswordCredentials) GetAccountForRequest(req *http.Request)
 	}
 
 	ep_auth.log("EP Auth handler got cookie '%s' with ID '%s'", ep_auth.options.SessionCookieConfig.Name, ck.Value)
-	
+
 	session_id := ck.Value
 
 	sessions_db := ep_auth.options.SessionsDatabase

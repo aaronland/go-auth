@@ -83,7 +83,16 @@ func NewConfig(ctx context.Context, uri string) (*Config, error) {
 	}
 
 	if u.Host != "" {
-		cfg.Domain = u.Host
+
+		domain := u.Host
+
+		idx := strings.IndexByte(domain, ':')
+
+		if idx > 0 {
+			domain = domain[0:idx]
+		}
+
+		cfg.Domain = domain
 	}
 
 	if u.Path != "" {
