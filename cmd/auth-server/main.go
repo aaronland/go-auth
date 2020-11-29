@@ -61,8 +61,8 @@ func main() {
 
 	crumb_uri := flag.String("crumb-uri", "debug", "...")
 
-	session_cookie_uri := flag.String("session-cookie-uri", "http://localhost:8080/?name=s&ttl=PT8H", "...")
-	mfa_cookie_uri := flag.String("mfa-cookie-uri", "http://localhost:8080/?name=m&ttl=PT1H", "...")
+	session_cookie_uri := flag.String("session-cookie-uri", "http://localhost:8080/?name=ss&ttl=PT8H", "...")
+	mfa_cookie_uri := flag.String("mfa-cookie-uri", "http://localhost:8080/?name=mf&ttl=PT1H", "...")
 
 	mfa_signin_url := flag.String("mfa-signin-url", "/mfa", "...")
 
@@ -190,12 +190,20 @@ func main() {
 
 	mux.Handle(ep_opts.SignupURL, signup_handler)
 
-	mfa_signout_handler := mfa_creds.SignoutHandler(auth_templates, "totp_signout", query_redirect_handler)
+	fn := func(rsp http.ResponseWriter, req *http.Request) {
+		log.Println("WTF")
+		return
+	}
+	
+	h := http.HandlerFunc(fn)
+		
+	// mfa_signout_handler := mfa_creds.SignoutHandler(auth_templates, "totp_signout", query_redirect_handler)
+	mfa_signout_handler := mfa_creds.SignoutHandler(auth_templates, "totp_signout", h)	
 
 	signout_handler := ep_creds.SignoutHandler(auth_templates, "signout", mfa_signout_handler)
 	signout_handler = mfa_creds.AuthHandler(signout_handler)
 	signout_handler = ep_creds.AuthHandler(signout_handler)
-	signout_handler = www_logger.Handler(signout_handler)
+	// signout_handler = www_logger.Handler(signout_handler)
 
 	mux.Handle(ep_opts.SignoutURL, signout_handler)
 

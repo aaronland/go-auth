@@ -31,6 +31,8 @@ func NotImplementedHandler() go_http.Handler {
 	return go_http.HandlerFunc(fn)
 }
 
+// please put these http-related things somewhere else
+
 func SetAccountContext(req *go_http.Request, acct *account.Account) *go_http.Request {
 
 	ctx := req.Context()
