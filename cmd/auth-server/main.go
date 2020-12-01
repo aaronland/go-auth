@@ -223,10 +223,13 @@ func main() {
 
 		*/
 
-		// so this doesn't work - as in only the last cookie is removed
+		// so this doesn't work - only the last cookie is removed because it only the
+		// last Set-Cookie header is sent as confirmed by looking at what's sent over
+		// the wire in tcpdump and the firefox network console (20201201/straup)
 		// http.Redirect(rsp, req, "/", 303)
 
-		// but this does... because, computers?
+		// but this does... as in both Set-Cookie headers are sent along because...
+		// computers? (20201201/straup)
 
 		rsp.Header().Set("Content-Type", "text/html; charset=utf-8")
 		rsp.Write([]byte(`<meta http-equiv="refresh" content="0; url=/">`))
