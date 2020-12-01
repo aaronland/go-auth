@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"log"
 )
 
 func AddHandler(next http.Handler) http.Handler {
@@ -59,10 +60,25 @@ func RemoveHandler() http.Handler {
 	return http.HandlerFunc(fn)	
 }
 
+func NoopHandler(next http.Handler) http.Handler {
+
+	fn := func(rsp http.ResponseWriter, req *http.Request) {
+
+		log.Println("NO OP", req.URL.Path, req.Method)
+		
+		next.ServeHTTP(rsp, req)
+		return		
+	}
+
+	return http.HandlerFunc(fn)	
+}
+
 func RemoveFirstHandler(next http.Handler) http.Handler {
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
+		log.Println("REMOVE 1", req.URL.Path, req.Method)
+		
 		ck1 := &http.Cookie{
 			Name: "c1",
 			Path: "/",
@@ -83,6 +99,8 @@ func RemoveSecondHandler(next http.Handler) http.Handler {
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
+		log.Println("REMOVE 2", req.URL.Path, req.Method)
+		
 		ck2 := &http.Cookie{
 			Name: "c2",
 			Path: "/",
@@ -102,6 +120,8 @@ func RemoveSecondHandler(next http.Handler) http.Handler {
 func RewriteHandler() http.Handler {
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
+
+		log.Println("REDIRECT", req.URL.Path, req.Method)
 		http.Redirect(rsp, req, "/", 303)
 		return		
 	}
@@ -121,8 +141,12 @@ func IndexHandler() http.Handler {
 		fmt.Fprintf(rsp, "C1 '%s' %v <br />", c1.String(), err1)
 		fmt.Fprintf(rsp, "C2 '%s' %v <br />", c2.String(), err2)		
 
-
-		rsp.Write([]byte(`<form method="POST" action="/remove"><button type="submit">remove</button></form>`))
+		if err1 == nil && err2 == nil {
+			rsp.Write([]byte(`<form method="POST" action="/remove"><button type="submit">remove</button></form>`))
+		} else {
+			rsp.Write([]byte(`<a href="/add">add</a>`))
+		}
+		
 		return
 	}
 
@@ -133,9 +157,9 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.Handle("/", IndexHandler())
-	mux.Handle("/add", AddHandler(RewriteHandler()))
-	mux.Handle("/remove", RemoveFirstHandler(RemoveSecondHandler(RewriteHandler())))	
+	mux.Handle("/", NoopHandler(NoopHandler(IndexHandler())))
+	mux.Handle("/add", NoopHandler(NoopHandler(AddHandler(RewriteHandler()))))
+	mux.Handle("/remove", NoopHandler(NoopHandler(RemoveFirstHandler(RemoveSecondHandler(RewriteHandler())))))
 
 	http.ListenAndServe(":8080", mux)
 }
