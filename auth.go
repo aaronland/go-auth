@@ -5,35 +5,35 @@ import (
 	"github.com/aaronland/go-auth/account"
 	"html/template"
 	_ "log"
-	go_http "net/http"
+	"net/http"
 )
 
 const CONTEXT_ACCOUNT_KEY string = "account"
 
 type Credentials interface {
-	AuthHandler(go_http.Handler) go_http.Handler
-	AppendCredentialsHandler(go_http.Handler) go_http.Handler
-	SigninHandler(*template.Template, string, go_http.Handler) go_http.Handler
-	SignupHandler(*template.Template, string, go_http.Handler) go_http.Handler
-	SignoutHandler(*template.Template, string, go_http.Handler) go_http.Handler
-	GetAccountForRequest(*go_http.Request) (*account.Account, error)
-	SetAccountForResponse(go_http.ResponseWriter, *account.Account) error
+	AuthHandler(http.Handler) http.Handler
+	AppendCredentialsHandler(http.Handler) http.Handler
+	SigninHandler(*template.Template, string, http.Handler) http.Handler
+	SignupHandler(*template.Template, string, http.Handler) http.Handler
+	SignoutHandler(*template.Template, string, http.Handler) http.Handler
+	GetAccountForRequest(*http.Request) (*account.Account, error)
+	SetAccountForResponse(http.ResponseWriter, *account.Account) error
 }
 
-func NotImplementedHandler() go_http.Handler {
+func NotImplementedHandler() http.Handler {
 
-	fn := func(rsp go_http.ResponseWriter, req *go_http.Request) {
+	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		go_http.Error(rsp, "Not Implemented", go_http.StatusNotImplemented)
+		http.Error(rsp, "Not Implemented", http.StatusNotImplemented)
 		return
 	}
 
-	return go_http.HandlerFunc(fn)
+	return http.HandlerFunc(fn)
 }
 
 // please put these http-related things somewhere else
 
-func SetAccountContext(req *go_http.Request, acct *account.Account) *go_http.Request {
+func SetAccountContext(req *http.Request, acct *account.Account) *http.Request {
 
 	ctx := req.Context()
 	ctx = context.WithValue(ctx, CONTEXT_ACCOUNT_KEY, acct)
@@ -41,7 +41,7 @@ func SetAccountContext(req *go_http.Request, acct *account.Account) *go_http.Req
 	return req.WithContext(ctx)
 }
 
-func GetAccountContext(req *go_http.Request) (*account.Account, error) {
+func GetAccountContext(req *http.Request) (*account.Account, error) {
 
 	ctx := req.Context()
 	v := ctx.Value(CONTEXT_ACCOUNT_KEY)
@@ -54,7 +54,7 @@ func GetAccountContext(req *go_http.Request) (*account.Account, error) {
 	return acct, nil
 }
 
-func IsAuthenticated(creds Credentials, req *go_http.Request) (bool, error) {
+func IsAuthenticated(creds Credentials, req *http.Request) (bool, error) {
 
 	acct, err := creds.GetAccountForRequest(req)
 

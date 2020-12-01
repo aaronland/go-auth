@@ -16,7 +16,6 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"os"
 )
 
 func IndexHandler(creds auth.Credentials, templates *template.Template, t_name string) http.Handler {
