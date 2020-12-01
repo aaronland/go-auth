@@ -132,8 +132,8 @@ func (cfg *Config) NewCookie(ctx context.Context, value string) (*http.Cookie, e
 	}
 
 	ck = &http.Cookie{
-		Name:     cfg.Name,
-		Value:    value,
+		Name:  cfg.Name,
+		Value: value,
 	}
 
 	log.Println("NEW COOKIE", ck.String())

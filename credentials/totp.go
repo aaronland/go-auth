@@ -293,17 +293,11 @@ func (totp_auth *TOTPCredentials) SignoutHandler(templates *template.Template, t
 
 		if totp_cookie != nil {
 
-			// now := time.Now()
-			// then := now.AddDate(0, -1, -1)
-
-			// totp_cookie.Expires = then
 			totp_cookie.MaxAge = -1
 			totp_cookie.Value = ""
 
-			totp_auth.log("MFA REMOVE cookie")
+			totp_auth.log("MFA REMOVE cookie '%s'", totp_auth.options.TOTPCookieConfig.Name)
 			http.SetCookie(rsp, totp_cookie)
-
-			// rsp.Header().Add("Set-Cookie", totp_cookie.String())
 		}
 
 		next.ServeHTTP(rsp, req)

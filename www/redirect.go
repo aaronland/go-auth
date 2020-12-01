@@ -49,7 +49,7 @@ func NewQueryRedirectHandler(opts *QueryRedirectHandlerOptions) go_http.Handler 
 
 		h := rsp.Header()
 		opts.Logger.Printf("OMGWTF %s", h["Set-Cookie"])
-		
+
 		redir, err := sanitize.RequestString(req, opts.RedirectParameter)
 
 		if err != nil {
@@ -68,7 +68,7 @@ func NewQueryRedirectHandler(opts *QueryRedirectHandlerOptions) go_http.Handler 
 			go_http.Error(rsp, "Unsupported redirect", go_http.StatusBadRequest)
 			return
 		}
-		
+
 		opts.Logger.Printf("Query redirect to %s (%s)", redir, req.Method)
 
 		go_http.Redirect(rsp, req, redir, 303)

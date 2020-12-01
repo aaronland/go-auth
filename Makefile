@@ -7,4 +7,7 @@ debug:
 	go run -mod vendor cmd/auth-server/main.go  -accounts-uri fs://./tmp -sessions-uri fs://./tmp -crumb-uri debug
 
 debug-code:
-	go run -mod vendor cmd/totp-code/main.go -accounts-uri fs://./tmp -email aaron@localhost | pbcopy
+	go run -mod vendor cmd/totp-code/main.go -accounts-uri fs://./tmp -email $(EMAIL)
+
+cookie-test:
+	go run -mod vendor cmd/cookie-test/main.go

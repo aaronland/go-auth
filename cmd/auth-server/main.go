@@ -16,6 +16,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 )
 
 func IndexHandler(creds auth.Credentials, templates *template.Template, t_name string) http.Handler {
@@ -191,19 +192,59 @@ func main() {
 	mux.Handle(ep_opts.SignupURL, signup_handler)
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
-		log.Println("WTF")
+
+		/*
+
+			[auth-server] 2020/12/01 08:07:16 EP Auth handler /signout (POST)
+			[auth-server] 2020/12/01 08:07:16 EP Auth handler get account /signout (POST)
+			[auth-server] 2020/12/01 08:07:16 EP Auth handler got cookie 'ss' with ID '***'
+			[auth-server] 2020/12/01 08:07:16 EP Auth handler get account return ACCT
+			[auth-server] 2020/12/01 08:07:16 EP set account context
+			[auth-server] 2020/12/01 08:07:16 EP go to next 0x13e4f00
+			[auth-server] 2020/12/01 08:07:16 MFA Auth Handler /signout
+			[auth-server] 2020/12/01 08:07:16 MFA cookie mf=***
+			[auth-server] 2020/12/01 08:07:16 MFA set auth context
+			[auth-server] 2020/12/01 08:07:16 EP signout handler /signout (POST)
+			[auth-server] 2020/12/01 08:07:16 EP Auth handler get account /signout (POST)
+			[auth-server] 2020/12/01 08:07:16 EP Auth handler got cookie 'ss' with ID '***'
+			[auth-server] 2020/12/01 08:07:16 EP Auth handler get account return ACCT
+			[auth-server] 2020/12/01 08:07:16 EP signout handler is auth true, <nil>
+			[auth-server] 2020/12/01 08:07:16 EP signout handler POST
+			[auth-server] 2020/12/01 08:07:16 EP REMOVE cookie 'ss'
+			[auth-server] 2020/12/01 08:07:16 EP signout handler go to next, 0x13e60e0
+			[auth-server] 2020/12/01 08:07:16 MFA Signout Handler /signout (POST)
+			[auth-server] 2020/12/01 08:07:16 MFA signout cookie mf=*** (mf)
+			[auth-server] 2020/12/01 08:07:16 MFA REMOVE cookie 'mf'
+			Set-Cookie: ss=; Max-Age=0
+			Set-Cookie: mf=; Max-Age=0
+			[auth-server] 2020/12/01 08:07:16 EP Auth handler / (GET)
+			[auth-server] 2020/12/01 08:07:16 EP Auth handler get account / (GET)
+			[auth-server] 2020/12/01 08:07:16 EP Auth handler got cookie 'ss' with ID '***'
+
+		*/
+
+		// so this doesn't work - as in only the last cookie is removed
+		// http.Redirect(rsp, req, "/", 303)
+
+		// but this does... because, computers?
+
+		rsp.Header().Set("Content-Type", "text/html; charset=utf-8")
+		rsp.Write([]byte(`<meta http-equiv="refresh" content="0; url=/">`))
 		return
 	}
-	
+
+	// local signout handler until I work out why redirects don't work unsetting cookies
 	h := http.HandlerFunc(fn)
-		
+
+	// see above...
 	// mfa_signout_handler := mfa_creds.SignoutHandler(auth_templates, "totp_signout", query_redirect_handler)
-	mfa_signout_handler := mfa_creds.SignoutHandler(auth_templates, "totp_signout", h)	
+
+	mfa_signout_handler := mfa_creds.SignoutHandler(auth_templates, "totp_signout", h)
 
 	signout_handler := ep_creds.SignoutHandler(auth_templates, "signout", mfa_signout_handler)
 	signout_handler = mfa_creds.AuthHandler(signout_handler)
 	signout_handler = ep_creds.AuthHandler(signout_handler)
-	// signout_handler = www_logger.Handler(signout_handler)
+	signout_handler = www_logger.Handler(signout_handler)
 
 	mux.Handle(ep_opts.SignoutURL, signout_handler)
 
