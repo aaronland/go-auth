@@ -4,10 +4,10 @@ cli:
 	go build -mod vendor -o bin/auth-server cmd/auth-server/main.go
 
 debug:
-	go run -mod vendor cmd/auth-server/main.go  -accounts-uri fs://./tmp -sessions-uri fs://./tmp -crumb-uri debug
+	go run -mod vendor cmd/auth-server/main.go  -accounts-uri fs:///tmp -sessions-uri fs:///tmp -crumb-uri debug
 
 debug-code:
-	go run -mod vendor cmd/totp-code/main.go -accounts-uri fs://./tmp -email $(EMAIL)
+	go run -mod vendor cmd/totp-code/main.go -accounts-uri fs:///tmp -email $(EMAIL)
 
 cookie-test:
 	go run -mod vendor cmd/cookie-test/main.go
